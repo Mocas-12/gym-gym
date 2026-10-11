@@ -1,11 +1,25 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
+import { hasInstallPrompt, isIOS, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
 
 export default function SettingsView() {
   const { settings, setSettings, exportState, importState, resetAll } = useStore()
   const toast = useUI(s => s.toast)
   const fileRef = useRef(null)
+  const [standalone] = useState(isStandalone)
+  const [canPrompt, setCanPrompt] = useState(hasInstallPrompt)
+  const [installSheet, setInstallSheet] = useState(false)
+  useEffect(() => onInstallAvailability(setCanPrompt), [])
+
+  const install = async () => {
+    if (canPrompt) {
+      const r = await promptInstall()
+      if (r === 'accepted') toast('开始安装，完成后从主屏幕打开 GymGym')
+    } else {
+      setInstallSheet(true) // iOS Safari：没有安装 API，走引导
+    }
+  }
 
   const doExport = () => {
     const blob = new Blob([exportState()], { type: 'application/json' })
@@ -63,19 +77,51 @@ export default function SettingsView() {
         </div>
       </div>
 
+      <div className="section-title">添加到主屏幕</div>
+      {standalone ? (
+        <div className="card">
+          <p className="small">✓ 已添加到主屏幕，正在全屏运行</p>
+        </div>
+      ) : (
+        <div className="card">
+          <p className="dim small">装到主屏幕后全屏运行、像原生 app 一样打开；数据存在本机，不会被系统 7 天清除。</p>
+          <button className="btn primary block" onClick={install}>📲 添加到主屏幕</button>
+        </div>
+      )}
+
+      {installSheet && (
+        <div className="sheet-mask" onClick={() => setInstallSheet(false)}>
+          <div className="sheet" onClick={e => e.stopPropagation()}>
+            <div className="sheet-head"><b>把 GymGym 装到主屏幕</b></div>
+            <div className="sheet-body">
+              <ol className="install-steps">
+                {isIOS() ? (
+                  <>
+                    <li>点浏览器底部的<b>「分享」按钮</b>（方框加向上箭头 ⬆️）</li>
+                    <li>在菜单里下滑找到<b>「添加到主屏幕」</b></li>
+                    <li>点右上角「添加」——之后从主屏幕打开就是全屏 app</li>
+                  </>
+                ) : (
+                  <>
+                    <li>点浏览器右上角的<b>「⋮」菜单</b></li>
+                    <li>选择<b>「安装应用」</b>或<b>「添加到主屏幕」</b></li>
+                    <li>确认安装——之后从主屏幕打开就是全屏 app</li>
+                  </>
+                )}
+              </ol>
+              <p className="dim small">数据存在这台手机的浏览器里，添加到主屏幕后不会被系统 7 天清除。</p>
+              <button className="btn ghost block sm" onClick={() => setInstallSheet(false)}>我知道了</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="section-title">危险区</div>
       <div className="card">
         <button className="btn danger block" onClick={() => { if (confirm('清空全部数据？不可恢复，建议先导出备份。')) { resetAll(); toast('已清空') } }}>清空所有数据</button>
       </div>
 
-      <div className="section-title">关于</div>
-      <div className="card">
-        <p className="small"><b>GymGym</b> v0.1.0 · 纯本地健身记录</p>
-        <p className="dim small">
-          iPhone 上用 Safari 打开后 → 分享 → 「添加到主屏幕」，即可全屏使用。
-          数据存于浏览器 localStorage，添加到主屏幕后不会被系统 7 天清除。
-        </p>
-      </div>
+      <div className="page-foot dim small">GymGym v0.1.0</div>
     </div>
   )
 }

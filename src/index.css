@@ -178,6 +178,20 @@ button.card { cursor: pointer; display: block; }
 }
 @keyframes pop { from { transform: translateX(-50%) scale(0.9); opacity: 0; } }
 
+/* ---- 安装引导 ---- */
+.install-steps { margin: 12px 0 4px; padding: 0; list-style: none; counter-reset: step; }
+.install-steps li {
+  counter-increment: step; display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 0; line-height: 1.5;
+}
+.install-steps li::before {
+  content: counter(step); flex: 0 0 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.install-steps + .dim { margin: 6px 0 12px; }
+.page-foot { text-align: center; margin-top: 28px; opacity: 0.7; }
+
 /* ---- 桌面端兜底（手机为主） ---- */
 @media (min-width: 700px) {
   .page { padding-bottom: 40px; }
