@@ -84,7 +84,12 @@ button.card { cursor: pointer; display: block; }
 .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 .btn.block { display: block; width: 100%; }
 .btn.sm { padding: 8px 12px; font-size: 14px; }
-.icon-btn { background: none; border: 0; color: var(--dim); font-size: 15px; cursor: pointer; padding: 4px 6px; }
+.icon-btn {
+  background: none; border: 0; color: var(--dim); font-size: 15px; cursor: pointer;
+  width: 38px; height: 38px; padding: 0; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:active { color: var(--danger); }
 
 .input {
   background: var(--card-2); border: 1px solid var(--line); border-radius: 12px;
