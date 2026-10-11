@@ -97,7 +97,7 @@ export default function SettingsView() {
         <button className="btn danger block" onClick={() => { if (confirm('清空全部数据？不可恢复，建议先导出备份。')) { resetAll(); toast('已清空') } }}>清空所有数据</button>
       </div>
 
-      <div className="page-foot dim small">GymGym v0.2.0</div>
+      <div className="page-foot dim small">GymGym v0.3.0</div>
     </div>
   )
 }

@@ -49,7 +49,7 @@
 - ☀️ **Screen stays awake**: the Wake Lock API keeps the display on while a workout is running
 - 🏆 **PR detection**: on finish, every exercise's estimated 1RM (Epley) is compared against history; beating a past record gets flagged 🎉 — first-time exercises only set a baseline
 - ⚖️ **Body weight**: daily log with a sparkline on Home and a full curve under History
-- 📊 **History & stats**: monthly sessions / volume, per-exercise bests, expandable workout records with every set
+- 📊 **History & stats**: per-exercise estimated-1RM curves, a year-long GitHub-style training heatmap, muscle-recovery bars (72h/48h by muscle size), monthly sessions / volume, per-exercise bests, expandable workout records
 - 💾 **One-tap backup**: export everything as a single JSON file, import it on any device
 - 🈶 **Chinese-first UI** with a dark iOS-style theme
 - 🔒 **Local-only**: no backend, no accounts, no telemetry — the entire state is one JSON document in `localStorage`

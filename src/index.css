@@ -258,6 +258,27 @@ button.card { cursor: pointer; display: block; }
 .desktop-only { display: none; }
 @media (min-width: 900px) { .desktop-only { display: flex; } }
 
+/* ---- v0.3 洞察图表 ---- */
+.hm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.hm { display: flex; gap: 2px; min-width: max-content; padding: 2px 0; }
+.hm-col { display: flex; flex-direction: column; gap: 2px; }
+.hm-cell { width: 10px; height: 10px; border-radius: 2.5px; background: var(--card-2); }
+.hm-cell.l1 { background: rgba(163, 230, 53, 0.25); }
+.hm-cell.l2 { background: rgba(163, 230, 53, 0.45); }
+.hm-cell.l3 { background: rgba(163, 230, 53, 0.7); }
+.hm-cell.l4 { background: var(--accent); }
+.ex-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+.ex-chips .chip { flex-shrink: 0; }
+.rec-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.rec-row + .rec-row { border-top: 1px solid var(--line); }
+.rec-m { width: 34px; font-weight: 650; font-size: 14px; flex-shrink: 0; }
+.rec-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--card-2); overflow: hidden; }
+.rec-bar i { display: block; height: 100%; background: var(--dim); border-radius: 99px; transition: width 0.3s; }
+.rec-bar i.ok { background: var(--accent); }
+.rec-tag { font-size: 12px; color: var(--dim); flex-shrink: 0; }
+.rec-tag.ok { color: var(--accent); font-weight: 650; }
+.rec-sets { flex-shrink: 0; }
+
 .err-text { word-break: break-all; text-align: center; padding: 0 10px; max-width: 100%; }
 
 /* ---- 桌面端兜底（手机为主） ---- */

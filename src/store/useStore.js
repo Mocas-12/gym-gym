@@ -45,7 +45,7 @@ export const useStore = create(
           const ex = get().allEx().find(e => e.id === id)
           const { sets, note } = get().buildSets(id, routine?.cfg || null)
           return {
-            exId: id, name: ex?.n || id, type: ex?.type || 'reps',
+            exId: id, name: ex?.n || id, type: ex?.type || 'reps', m: ex?.m || null,
             restSec: ex?.rest ?? null, sup: supIndexOf(routine, id),
             sets, ...(note ? { note } : {}),
           }
@@ -61,7 +61,7 @@ export const useStore = create(
           active: {
             ...a,
             entries: [...a.entries, {
-              exId, name: ex?.n || exId, type: ex?.type || 'reps',
+              exId, name: ex?.n || exId, type: ex?.type || 'reps', m: ex?.m || null,
               restSec: ex?.rest ?? null, sup: supIndexOf(routine, exId),
               sets, ...(note ? { note } : {}),
             }],

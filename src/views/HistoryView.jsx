@@ -1,14 +1,29 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { best1RM } from '../lib/onerm.js'
+import { e1rmSeries, trainedExercises, heatmap, muscleLoad, recoveryStatus } from '../lib/insights.js'
+import { Heatmap, LineChart, RecoveryList } from '../components/Charts.jsx'
 
 const fmtDate = ts => new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 const fmtDur = ms => `${Math.round(ms / 60000)} 分钟`
 
 export default function HistoryView() {
-  const { workouts, bodyweight, deleteWorkout } = useStore()
+  const { workouts, bodyweight, deleteWorkout, customEx, allEx } = useStore()
   const [openId, setOpenId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [chartEx, setChartEx] = useState(null)
+
+  /* 洞察数据 */
+  const trained = useMemo(() => trainedExercises(workouts), [workouts])
+  const nameById = useMemo(() => {
+    const m = {}
+    for (const e of allEx()) m[e.id] = e.n
+    return m
+  }, [customEx])
+  const activeEx = chartEx || trained[0]
+  const series = useMemo(() => (activeEx ? e1rmSeries(workouts, activeEx) : []), [workouts, activeEx])
+  const grid = useMemo(() => heatmap(workouts), [workouts])
+  const recovering = useMemo(() => recoveryStatus(muscleLoad(workouts, 7)), [workouts])
 
   /* 每个动作的历史最佳（估计 1RM）——历史数据可能有脏值，逐条过滤 */
   const prs = useMemo(() => {
@@ -41,6 +56,30 @@ export default function HistoryView() {
           <div className="card"><WeightChart data={[...bodyweight].reverse()} /></div>
         </>
       )}
+      {trained.length > 0 && (
+        <>
+          <div className="section-title">动作 1RM 曲线</div>
+          <div className="card">
+            <div className="ex-chips">
+              {trained.slice(0, 12).map(id => (
+                <button key={id} className={'chip sm' + (activeEx === id ? ' on' : '')} onClick={() => setChartEx(id)}>{nameById[id] || id}</button>
+              ))}
+            </div>
+            <LineChart data={series} />
+          </div>
+        </>
+      )}
+
+      <div className="section-title">近一年训练热力图</div>
+      <div className="card"><Heatmap data={grid} />
+        <div className="row-between dim small" style={{ marginTop: 8 }}>
+          <span>一年前</span><span>颜色越亮 = 容量越大</span><span>今天</span>
+        </div>
+      </div>
+
+      <div className="section-title">肌群恢复（大肌群 72h · 小肌群 48h）</div>
+      <div className="card"><RecoveryList items={recovering} /></div>
+
       {prs.length > 0 && (
         <>
           <div className="section-title">动作最佳 · 估计1RM</div>
