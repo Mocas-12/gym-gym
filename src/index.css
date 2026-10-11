@@ -183,19 +183,25 @@ button.card { cursor: pointer; display: block; }
 }
 @keyframes pop { from { transform: translateX(-50%) scale(0.9); opacity: 0; } }
 
-/* ---- 安装引导 ---- */
-.install-steps { margin: 12px 0 4px; padding: 0; list-style: none; counter-reset: step; }
-.install-steps li {
-  counter-increment: step; display: flex; gap: 10px; align-items: flex-start;
-  padding: 8px 0; line-height: 1.5;
+/* ---- 安装引导（两行式步骤：标题+说明，分隔线对齐） ---- */
+.guide { padding-top: 2px; }
+.guide-step {
+  display: grid; grid-template-columns: 26px 1fr; gap: 12px;
+  padding: 13px 0; align-items: start;
 }
-.install-steps li::before {
-  content: counter(step); flex: 0 0 22px; height: 22px; border-radius: 50%;
-  background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 13px;
-  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+.guide-step + .guide-step { border-top: 1px solid var(--line); }
+.guide-n {
+  width: 26px; height: 26px; border-radius: 50%; margin-top: 1px;
+  background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
 }
-.install-steps + .dim { margin: 6px 0 12px; }
+.guide-t { font-weight: 650; display: flex; align-items: center; gap: 7px; line-height: 1.4; }
+.guide-d { color: var(--dim); font-size: 13.5px; margin-top: 3px; line-height: 1.5; }
+.il { width: 20px; height: 20px; flex-shrink: 0; color: var(--accent); }
+.guide-note { margin: 12px 2px; }
 .page-foot { text-align: center; margin-top: 28px; opacity: 0.7; }
+
 .err-text { word-break: break-all; text-align: center; padding: 0 10px; max-width: 100%; }
 
 /* ---- 桌面端兜底（手机为主） ---- */

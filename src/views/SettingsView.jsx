@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { hasInstallPrompt, isIOS, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
+import InstallGuide from '../components/InstallGuide.jsx'
+import { hasInstallPrompt, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
 
 export default function SettingsView() {
   const { settings, setSettings, exportState, importState, resetAll } = useStore()
@@ -89,32 +90,7 @@ export default function SettingsView() {
         </div>
       )}
 
-      {installSheet && (
-        <div className="sheet-mask" onClick={() => setInstallSheet(false)}>
-          <div className="sheet" onClick={e => e.stopPropagation()}>
-            <div className="sheet-head"><b>把 GymGym 装到主屏幕</b></div>
-            <div className="sheet-body">
-              <ol className="install-steps">
-                {isIOS() ? (
-                  <>
-                    <li>点浏览器底部的<b>「分享」按钮</b>（方框加向上箭头 ⬆️）</li>
-                    <li>在菜单里下滑找到<b>「添加到主屏幕」</b></li>
-                    <li>点右上角「添加」——之后从主屏幕打开就是全屏 app</li>
-                  </>
-                ) : (
-                  <>
-                    <li>点浏览器右上角的<b>「⋮」菜单</b></li>
-                    <li>选择<b>「安装应用」</b>或<b>「添加到主屏幕」</b></li>
-                    <li>确认安装——之后从主屏幕打开就是全屏 app</li>
-                  </>
-                )}
-              </ol>
-              <p className="dim small">数据存在这台手机的浏览器里，添加到主屏幕后不会被系统 7 天清除。</p>
-              <button className="btn ghost block sm" onClick={() => setInstallSheet(false)}>我知道了</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {installSheet && <InstallGuide onClose={() => setInstallSheet(false)} />}
 
       <div className="section-title">危险区</div>
       <div className="card">
