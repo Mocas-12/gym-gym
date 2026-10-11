@@ -24,6 +24,8 @@ npm run dev        # 本地开发
 npm test           # 领域逻辑单测（1RM、容量、PR、预填）
 npm run build      # 构建到 dist/
 npm run icons      # 重新生成应用图标（纯 Node 手写 PNG 编码）
+npm run smoke      # 端到端冒烟（先 npm run build && npm run preview）
+npm run deploy     # 构建 + 发布到 gh-pages（线上即更新）
 ```
 
 ## iPhone 安装
@@ -43,7 +45,11 @@ npm run icons      # 重新生成应用图标（纯 Node 手写 PNG 编码）
 
 ## 部署
 
-GitHub Actions 已配好（`.github/workflows/deploy.yml`）：push 到 `main` 自动测试 + 构建并发布到 GitHub Pages。仓库 Settings → Pages → Source 选 **GitHub Actions** 即可。
+线上地址：**https://mocas-12.github.io/gym-gym/**
+
+当前是零 Actions 的发布方式：`npm run deploy` 会构建并把 `dist/` 内容作为孤儿提交推到 `gh-pages` 分支（Pages 源已指向它）。改完代码跑一下就上线。
+
+另备有 GitHub Actions 工作流（`.github/workflows/deploy.yml`，本地保留未入库）：等 gh CLI 补上 `workflow` 权限（`gh auth refresh -h github.com -s workflow`）后，把它提交进仓库、Pages 源切到 GitHub Actions，就能实现 push main 自动测试+发布。
 
 ## License
 
