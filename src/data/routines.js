@@ -30,7 +30,7 @@ export const PRESET_ROUTINES = [
   {
     id: 'fullbody',
     name: '全身 · 居家',
-    exIds: ids(['俯卧撑', '哑铃单臂划船', '箭步蹲', '平板支撑']),
+    exIds: ids(['俯卧撑', '单臂哑铃划船', '箭步蹲', '平板支撑']),
     supersets: [],
     cfg,
   },

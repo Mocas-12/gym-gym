@@ -1,22 +1,28 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { MUSCLES } from '../data/exercises.js'
+import { MUSCLES, EQUIPMENT } from '../data/exercises.js'
 
-/* 底部抽屉：按肌群分组 + 搜索，多点几个连续加动作。 */
+/* 底部抽屉：器械筛选 + 按肌群分组 + 搜索，多点几个连续加动作。 */
 export default function ExercisePicker({ onAdd }) {
   const allEx = useStore(s => s.allEx)
   const custom = useStore(s => s.customEx)
   const addCustomEx = useStore(s => s.addCustomEx)
   const toast = useUI(s => s.toast)
   const [q, setQ] = useState('')
+  const [eq, setEq] = useState(null)
   const [added, setAdded] = useState([])
   const list = allEx()
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return MUSCLES.map(m => ({ m, items: list.filter(e => e.m === m && (!t || e.n.toLowerCase().includes(t) || e.id.includes(t))) }))
-      .filter(g => g.items.length)
-  }, [q, list, custom])
+    return MUSCLES.map(m => ({
+      m,
+      items: list.filter(e =>
+        e.m === m && (!eq || e.eq === eq) &&
+        (!t || e.n.toLowerCase().includes(t) || e.id.includes(t))
+      ),
+    })).filter(g => g.items.length)
+  }, [q, eq, list, custom])
 
   const add = ex => {
     if (onAdd(ex) !== false) setAdded(a => [...a, ex.n])
@@ -41,6 +47,12 @@ export default function ExercisePicker({ onAdd }) {
             onKeyDown={e => { if (e.key === 'Enter' && q.trim() && !shown.some(g => g.items.length)) addCustom() }}
           />
           <button className="btn primary" onClick={() => onAdd(null, added)}>完成{added.length ? `(${added.length})` : ''}</button>
+        </div>
+        <div className="eq-filter">
+          <button className={'chip sm' + (eq === null ? ' on' : '')} onClick={() => setEq(null)}>全部</button>
+          {EQUIPMENT.map(x => (
+            <button key={x} className={'chip sm' + (eq === x ? ' on' : '')} onClick={() => setEq(eq === x ? null : x)}>{x}</button>
+          ))}
         </div>
         <div className="sheet-body">
           {shown.length === 0 && q.trim() && (

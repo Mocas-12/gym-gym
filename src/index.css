@@ -258,6 +258,9 @@ button.card { cursor: pointer; display: block; }
 .desktop-only { display: none; }
 @media (min-width: 900px) { .desktop-only { display: flex; } }
 
+.eq-filter { display: flex; gap: 6px; padding: 10px 16px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.eq-filter .chip { flex-shrink: 0; }
+
 /* ---- v0.3 洞察图表 ---- */
 .hm-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .hm { display: flex; gap: 2px; min-width: max-content; padding: 2px 0; }
