@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import Home from './views/Home.jsx'
 import WorkoutView from './views/WorkoutView.jsx'
 import HistoryView from './views/HistoryView.jsx'
+import PlanView from './views/PlanView.jsx'
 import SettingsView from './views/SettingsView.jsx'
 import TabBar from './components/TabBar.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { useUI } from './store/useUI.js'
 
-const TABS = ['home', 'workout', 'history', 'settings']
+const TABS = ['home', 'workout', 'plan', 'history', 'settings']
 const readHash = () => {
   const r = (location.hash || '').replace(/^#\/?/, '')
   return TABS.includes(r) ? r : 'home'
@@ -30,6 +31,7 @@ export default function App() {
         <ErrorBoundary key={route}>
           {route === 'home' && <Home />}
           {route === 'workout' && <WorkoutView />}
+          {route === 'plan' && <PlanView />}
           {route === 'history' && <HistoryView />}
           {route === 'settings' && <SettingsView />}
         </ErrorBoundary>

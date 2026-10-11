@@ -3,27 +3,27 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import RestTimer from '../components/RestTimer.jsx'
 import ExercisePicker from '../components/ExercisePicker.jsx'
+import SetRow from '../components/SetRow.jsx'
 
 const fmtElapsed = ms => {
   const s = Math.floor(ms / 1000)
   return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
+const REST_OPTS = [45, 60, 90, 120, 150, 180]
 
 export default function WorkoutView() {
   const { active, settings } = useStore()
-  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, finishWorkout, discardWorkout } = useStore()
+  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, finishWorkout, discardWorkout, setEntryRest } = useStore()
   const { startRest, toast } = useUI()
   const [now, setNow] = useState(Date.now())
   const [picking, setPicking] = useState(false)
-  const scroller = useRef(null)
+  const [restPickFor, setRestPickFor] = useState(null)
 
   /* 屏幕常亮 + 每秒刷新计时 */
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)
     let lock = null
-    const acquire = async () => {
-      try { lock = await navigator.wakeLock?.request('screen') } catch { /* 不支持/被拒 */ }
-    }
+    const acquire = async () => { try { lock = await navigator.wakeLock?.request('screen') } catch { /* 不支持/被拒 */ } }
     if (active) acquire()
     const onVis = () => { if (document.visibilityState === 'visible' && active) acquire() }
     document.addEventListener('visibilitychange', onVis)
@@ -40,20 +40,30 @@ export default function WorkoutView() {
     )
   }
 
-  const onPick = (ex, added) => {
-    if (ex) {
-      if (!addEntry(ex.id)) toast('这个动作已经在训练里了')
-    }
-    if (ex === null) setPicking(false)
+  /* 超级组：entry.sup 是组序号；同组动作交替做 */
+  const supPartner = en => {
+    if (en.sup == null) return null
+    const p = active.entries.find(x => x.sup === en.sup && x.exId !== en.exId)
+    return p?.name || null
   }
 
-  const done = (exId, i, ex) => {
-    const rest = toggleDone(exId, i)
+  const onPick = ex => {
+    if (ex) {
+      if (!addEntry(ex.id)) toast('这个动作已经在训练里了')
+    } else setPicking(false)
+  }
+
+  const done = (en, i) => {
+    const rest = toggleDone(en.exId, i)
     if (rest > 0) {
-      startRest(rest, ex.type === 'time' ? ex.name : `${ex.name} · 下一组`)
+      const partner = supPartner(en)
+      const label = partner ? `↔ 接着做 ${partner}` : (en.type === 'time' ? en.name : `${en.name} · 下一组`)
+      startRest(rest, label)
       navigator.vibrate?.(60)
     }
   }
+
+  const restOf = en => en.restSec ?? settings.restSec
 
   return (
     <div className="page workout-page">
@@ -75,36 +85,40 @@ export default function WorkoutView() {
       </div>
 
       {active.entries.map(en => {
-        const ex = { name: en.name, type: en.type || 'reps', ...en }
+        const partner = supPartner(en)
         return (
-          <div key={en.exId} className="card entry">
+          <div key={en.exId} className={'card entry' + (en.sup != null ? ` sup sup-${en.sup % 3}` : '')}>
             <div className="row-between">
-              <div className="card-title">{en.name}</div>
-              <button className="icon-btn" title="移除动作" onClick={() => removeEntry(en.exId)}>✕</button>
-            </div>
-            {en.sets.length === 0 && <div className="dim small">还没有组，点下方添加</div>}
-            {en.sets.map((s, i) => (
-              <div key={i} className={'set-row' + (s.done ? ' done' : '')}>
-                <span className="set-n">{i + 1}</span>
-                <input
-                  className="input set-input" inputMode="decimal"
-                  placeholder={ex.type === 'time' ? '秒' : 'kg'}
-                  value={s.kg ?? ''}
-                  onChange={e => updateSet(en.exId, i, { kg: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                />
-                <span className="x">×</span>
-                <input
-                  className="input set-input" inputMode="numeric"
-                  placeholder={ex.type === 'time' ? '速度' : '次数'}
-                  value={s.reps ?? ''}
-                  onChange={e => updateSet(en.exId, i, { reps: e.target.value === '' ? null : parseInt(e.target.value) })}
-                />
-                <button
-                  className={'done-btn' + (s.done ? ' on' : '')}
-                  onClick={() => done(en.exId, i, ex)}
-                >✓</button>
-                <button className="icon-btn" onClick={() => deleteSet(en.exId, i)}>🗑</button>
+              <div className="card-title">
+                {en.sup != null && <span className="sup-dot" />}
+                {en.name}
+                {partner && <span className="dim small sup-tag"> ↔ {partner}</span>}
               </div>
+              <div className="row" style={{ marginTop: 0 }}>
+                <button className="rest-chip" onClick={() => setRestPickFor(restPickFor === en.exId ? null : en.exId)}>⏱{restOf(en)}s</button>
+                <button className="icon-btn" title="移除动作" onClick={() => removeEntry(en.exId)}>✕</button>
+              </div>
+            </div>
+            {en.note && <div className="target-note">{en.note}</div>}
+            {restPickFor === en.exId && (
+              <div className="rest-picker">
+                {REST_OPTS.map(s => (
+                  <button key={s} className={'chip' + (restOf(en) === s ? ' on' : '')} onClick={() => { setEntryRest(en.exId, s); setRestPickFor(null) }}>{s}s</button>
+                ))}
+              </div>
+            )}
+            {en.sets.length === 0 && <div className="dim small">还没有组，点下方添加（或右滑上一行复制）</div>}
+            {en.sets.map((s, i) => (
+              <SetRow
+                key={i}
+                idx={i}
+                set={s}
+                type={en.type}
+                onDone={() => done(en, i)}
+                onDel={() => deleteSet(en.exId, i)}
+                onCopy={() => copySet(en.exId, i)}
+                onUpdate={patch => updateSet(en.exId, i, patch)}
+              />
             ))}
             <button className="btn ghost block sm" onClick={() => addSet(en.exId)}>＋ 添加一组</button>
           </div>

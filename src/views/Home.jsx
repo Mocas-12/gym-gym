@@ -2,6 +2,7 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import RestTimer from '../components/RestTimer.jsx'
 import { workoutVolume } from '../lib/workout.js'
+import { todayPlan, nextAssigned, WEEKDAY_CN } from '../lib/plan.js'
 
 const fmtDate = ts => {
   const d = new Date(ts)
@@ -13,7 +14,7 @@ const fmtDur = ms => {
 }
 
 export default function Home() {
-  const { workouts, bodyweight, routines, active } = useStore()
+  const { workouts, bodyweight, routines, active, plan } = useStore()
   const { startWorkout, logBodyweight } = useStore()
   const { startRest, toast } = useUI()
   const go = r => { location.hash = '#/' + r }
@@ -22,9 +23,16 @@ export default function Home() {
   const todayW = bodyweight[0]
   const week = bodyweight.slice(0, 7)
 
-  const begin = (name, ids) => {
+  /* 今天的安排：week 模式按星期、rotation 模式按顺序 */
+  const todayRid = todayPlan(plan, workouts)
+  const todayRoutine = routines.find(r => r.id === todayRid)
+  const restHint = !todayRoutine ? nextAssigned(plan, workouts) : null
+  const restHintName = restHint ? routines.find(r => r.id === restHint.rid)?.name : null
+  const dow = new Date().getDay()
+
+  const begin = (name, ids, rid = null) => {
     if (active) { toast('有一次训练还在进行中'); go('workout'); return }
-    startWorkout(name, ids)
+    startWorkout(name, ids, rid)
     go('workout')
   }
 
@@ -44,10 +52,30 @@ export default function Home() {
         </button>
       )}
 
-      <div className="section-title">开始训练</div>
+      <div className="section-title">今天的安排</div>
+      {todayRoutine ? (
+        <button className="card today-card" onClick={() => begin(todayRoutine.name, todayRoutine.exIds, todayRoutine.id)}>
+          <div className="row-between">
+            <div>
+              <div className="card-title">{todayRoutine.name}</div>
+              <div className="dim small">{todayRoutine.exIds.length} 个动作 · {WEEKDAY_CN[dow]}</div>
+            </div>
+            <span className="btn primary sm">开练</span>
+          </div>
+        </button>
+      ) : (
+        <div className="card rest-card">
+          <div className="card-title">🙂 今天休息</div>
+          {restHintName
+            ? <div className="dim small">{plan.mode === 'rotation' ? `下一个：${restHintName}` : `${restHint.inDays === 0 ? '下一个就是今天，在轮换里' : restHint.inDays + ' 天后（' + WEEKDAY_CN[(dow + restHint.inDays) % 7] + '）：'}${restHintName}`}</div>
+            : <div className="dim small">还没排课，去「计划」标签安排一周训练。</div>}
+        </div>
+      )}
+
+      <div className="section-title">全部模板</div>
       <div className="start-grid">
         {routines.map(r => (
-          <button key={r.id} className="card start-card" onClick={() => begin(r.name, r.exIds)}>
+          <button key={r.id} className="card start-card" onClick={() => begin(r.name, r.exIds, r.id)}>
             <div className="card-title">{r.name}</div>
             <div className="dim">{r.exIds.length} 个动作</div>
           </button>

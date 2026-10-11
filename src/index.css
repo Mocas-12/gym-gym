@@ -202,6 +202,62 @@ button.card { cursor: pointer; display: block; }
 .guide-note { margin: 12px 2px; }
 .page-foot { text-align: center; margin-top: 28px; opacity: 0.7; }
 
+/* ---- v0.2 训练体验 ---- */
+.today-card { border-color: var(--accent); background: linear-gradient(135deg, rgba(163, 230, 53, 0.1), var(--card)); }
+.rest-card .card-title { color: var(--dim); }
+.target-note {
+  font-size: 13px; color: var(--accent); background: rgba(163, 230, 53, 0.08);
+  border-radius: 10px; padding: 7px 10px; margin-top: 8px;
+}
+.sup-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 2px; }
+.sup-0 .sup-dot { background: #f0abfc; }
+.sup-1 .sup-dot { background: #7dd3fc; }
+.sup-2 .sup-dot { background: #fcd34d; }
+.sup-tag { margin-left: 2px; }
+.sup.sup-0 { border-left: 3px solid #f0abfc; }
+.sup.sup-1 { border-left: 3px solid #7dd3fc; }
+.sup.sup-2 { border-left: 3px solid #fcd34d; }
+.rest-chip {
+  background: var(--card-2); border: 1px solid var(--line); color: var(--dim);
+  border-radius: 99px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.rest-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* 滑动行 */
+.swipe-wrap { position: relative; touch-action: pan-y; }
+.swipe-bg {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  font-size: 13px; color: var(--accent-ink); font-weight: 700;
+  border-radius: 12px; opacity: 0; transition: opacity 0.12s; pointer-events: none;
+}
+.swipe-bg.left { justify-content: flex-end; padding-right: 14px; background: var(--danger); color: #fff; }
+.swipe-bg.right { justify-content: flex-start; padding-left: 14px; background: var(--accent); }
+.swipe-bg.show { opacity: 1; }
+.set-row { position: relative; }
+.set-row.dragging { transition: none; }
+
+/* 计划页 */
+.plan-day { display: grid; grid-template-columns: 42px 1fr; gap: 10px; padding: 8px 0; align-items: start; }
+.plan-day + .plan-day { border-top: 1px solid var(--line); }
+.plan-dow { font-size: 13px; color: var(--dim); font-weight: 650; padding-top: 7px; }
+.plan-dow.today { color: var(--accent); }
+.plan-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip.sm { padding: 5px 10px; font-size: 12.5px; }
+.rot-row { display: flex; align-items: center; gap: 6px; padding: 9px 0; }
+.rot-row + .rot-row { border-top: 1px solid var(--line); }
+.rot-n { width: 22px; height: 22px; border-radius: 50%; background: var(--card-2); border: 1px solid var(--line); color: var(--dim); font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* 模板编辑器 */
+.sheet-mask.top { align-items: stretch; }
+.sheet.tall { max-height: 94dvh; }
+.edit-row { display: flex; align-items: flex-start; gap: 6px; padding: 10px 0; }
+.edit-row + .edit-row { border-top: 1px solid var(--line); }
+.cfg-row { display: flex; gap: 10px; margin-top: 10px; }
+.num-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.num-field .input { width: 100%; }
+.desktop-only { display: none; }
+@media (min-width: 900px) { .desktop-only { display: flex; } }
+
 .err-text { word-break: break-all; text-align: center; padding: 0 10px; max-width: 100%; }
 
 /* ---- 桌面端兜底（手机为主） ---- */
