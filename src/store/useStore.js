@@ -6,7 +6,8 @@ import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
 import { finalizeWorkout, prefillFor } from '../lib/workout.js'
 
-const uid = () => crypto.randomUUID().replace(/-/g, '').slice(0, 11)
+/* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
+const uid = () => [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 11)
 const today = () => new Date().toISOString().slice(0, 10)
 
 export const useStore = create(

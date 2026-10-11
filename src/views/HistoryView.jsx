@@ -10,12 +10,12 @@ export default function HistoryView() {
   const [openId, setOpenId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
 
-  /* 每个动作的历史最佳（估计 1RM） */
+  /* 每个动作的历史最佳（估计 1RM）——历史数据可能有脏值，逐条过滤 */
   const prs = useMemo(() => {
     const best = {}
     for (const w of workouts) for (const e of w.entries || []) {
       const b = best1RM(e.sets)
-      if (b > (best[e.exId]?.e1rm || 0)) best[e.exId] = { exId: e.exId, name: e.name, e1rm: b }
+      if (Number.isFinite(b) && b > (best[e.exId]?.e1rm || 0)) best[e.exId] = { exId: e.exId, name: e.name, e1rm: b }
     }
     return Object.values(best).sort((a, b) => b.e1rm - a.e1rm)
   }, [workouts])
@@ -41,7 +41,6 @@ export default function HistoryView() {
           <div className="card"><WeightChart data={[...bodyweight].reverse()} /></div>
         </>
       )}
-
       {prs.length > 0 && (
         <>
           <div className="section-title">动作最佳 · 估计1RM</div>
@@ -63,7 +62,7 @@ export default function HistoryView() {
           <button className="row-between card-open" onClick={() => setOpenId(openId === w.id ? null : w.id)}>
             <div>
               <div className="card-title">{w.name}</div>
-              <div className="dim">{fmtDate(w.start)} · {fmtDur(w.end - w.start)} · {(w.volume / 1000).toFixed(1)}t{w.prs?.length ? ` · 🎉${w.prs.length} PR` : ''}</div>
+              <div className="dim">{fmtDate(w.start)} · {fmtDur((w.end ?? w.start) - w.start)} · {((w.volume ?? 0) / 1000).toFixed(1)}t{w.prs?.length ? ` · 🎉${w.prs.length} PR` : ''}</div>
             </div>
             <span className="chev">{openId === w.id ? '▾' : '›'}</span>
           </button>
@@ -91,7 +90,10 @@ export default function HistoryView() {
   )
 }
 
-function WeightChart({ data }) {
+function WeightChart({ data: raw }) {
+  // 脏数据防御：只留数值型 kg，且至少两点才画
+  const data = (raw || []).filter(e => e && Number.isFinite(e.kg))
+  if (data.length < 2) return null
   const ks = data.map(e => e.kg)
   const min = Math.min(...ks) - 0.5, max = Math.max(...ks) + 0.5
   const span = max - min || 1
@@ -106,7 +108,7 @@ function WeightChart({ data }) {
         {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill="var(--accent)" />)}
       </svg>
       <div className="row-between dim small">
-        <span>{fmtDate(data[0].t)}</span>
+        <span>{fmtDate(data[0].t ?? data[0].d)}</span>
         <span>{data.length} 次记录</span>
         <span>现在 {last.kg} kg</span>
       </div>

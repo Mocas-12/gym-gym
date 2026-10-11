@@ -100,7 +100,9 @@ export default function Home() {
   )
 }
 
-function Sparkline({ data }) {
+function Sparkline({ data: raw }) {
+  const data = (raw || []).filter(v => Number.isFinite(v))
+  if (data.length < 2) return null
   const min = Math.min(...data), max = Math.max(...data)
   const span = max - min || 1
   const W = 300, H = 56
