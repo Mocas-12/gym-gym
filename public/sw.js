@@ -1,9 +1,13 @@
 /* 极简 Service Worker：导航请求网络优先（发新版即拿到最新），静态资源缓存优先。
  * 目的有二：让 Android/Chrome 满足可安装条件（触发原生安装框），以及离线打开。 */
-const CACHE = 'gym-gym-v1'
+const CACHE = 'gym-gym-v2'
 
 self.addEventListener('install', () => self.skipWaiting())
-self.addEventListener('activate', e => e.waitUntil(self.clients.claim()))
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim())
+))
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
