@@ -5,11 +5,9 @@ compatibility_date = "2026-01-01"
 # 允许的前端来源（逗号分隔）。改了要重新 deploy。
 [vars]
 ORIGINS = "https://mocas-12.github.io,http://localhost:5173,http://localhost:4173"
-VAPID_SUB = "mailto:you@example.com"
+VAPID_SUB = "https://mocas-12.github.io/gym-gym/"
 
-# KV 存储：先执行一次
-#   npx wrangler kv namespace create KV
-# 把返回的 id 填到下面，再 deploy。
+# KV 存储：已创建（2026-10-12）
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_YOUR_KV_ID"
+id = "5f30a96dc60740ed9a155b993744145a"

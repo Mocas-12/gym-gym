@@ -89,7 +89,8 @@ const enc = new TextEncoder()
 
 /* base64url 编解码：手写码表实现（不依赖 atob/btoa） */
 const B64U_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
-const u8ToB64u = u8 => {
+const u8ToB64u = input => {
+  const u8 = input instanceof Uint8Array ? input : new Uint8Array(input) // exportKey/sign 返回 ArrayBuffer，统一收口
   const out = []
   for (let i = 0; i < u8.length; i += 3) {
     const b0 = u8[i], b1 = u8[i + 1], b2 = u8[i + 2]
@@ -155,7 +156,10 @@ async function authUid(request, env) {
 
 async function vapidKeys(env) {
   const saved = await env.KV.get('vapid')
-  if (saved) return JSON.parse(saved)
+  if (saved) {
+    const k = JSON.parse(saved)
+    if (k.pubRaw) return k // 自愈：旧的坏缓存（空 pubRaw）不信任，重新生成
+  }
   const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])
   const keys = {
     privJwk: await crypto.subtle.exportKey('jwk', pair.privateKey),

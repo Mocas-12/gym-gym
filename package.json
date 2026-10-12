@@ -11,7 +11,8 @@
     "icons": "node scripts/gen-icons.mjs",
     "test": "vitest run",
     "smoke": "node smoke.mjs",
-    "deploy": "node scripts/deploy.mjs"
+    "deploy": "node scripts/deploy.mjs",
+    "backend:deploy": "node scripts/deploy-backend.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
