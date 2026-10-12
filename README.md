@@ -43,6 +43,9 @@
 - 📈 **Progression engine**: linear and double-progression schemes auto-advance your working weights — hit all target reps → load goes up; miss → it doesn't; stall twice → deload. Every target shows *why* it is that number (openGym's core idea, rebuilt)
 - 🔗 **Supersets**: pair adjacent exercises in the routine editor; the workout flags the pair and the rest-timer tells you to alternate
 - 👆 **Swipe a set**: left to delete, right to copy — plus per-exercise rest override right on the workout screen
+- ✏️ **Edit & backfill history**: fix a past workout's date, sets or exercises, or log a session you did on paper — volume and PRs are re-read from the corrected history
+- 🔥 **Warm-up sets**: tap a set number to mark it as warm-up; it stays in the log but is excluded from volume, PRs, 1RM and recovery stats
+- 🎯 **Weight goal**: set a target body weight and the chart draws the goal line with remaining distance
 - 🏋️ **Guided sessions**: start from a preset routine (push / pull / legs / full-body) or a blank workout; 115 built-in exercises across 8 muscle groups and 5 equipment types, with equipment filters and search — plus one-tap custom exercises
 - 📋 **Weights auto-filled**: every exercise pre-fills the sets, reps and load you logged last time — no typing from scratch (inspired by openGym)
 - ⏱️ **Rest timer**: checking a set done starts a countdown that floats above every screen; it beeps (WebAudio) and vibrates when time is up, with +30s and skip controls

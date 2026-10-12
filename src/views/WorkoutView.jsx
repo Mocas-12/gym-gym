@@ -13,7 +13,7 @@ const REST_OPTS = [45, 60, 90, 120, 150, 180]
 
 export default function WorkoutView() {
   const { active, settings } = useStore()
-  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, finishWorkout, discardWorkout, setEntryRest } = useStore()
+  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, toggleWarmup, finishWorkout, discardWorkout, setEntryRest } = useStore()
   const { startRest, toast } = useUI()
   const [now, setNow] = useState(Date.now())
   const [picking, setPicking] = useState(false)
@@ -118,6 +118,7 @@ export default function WorkoutView() {
                 onDel={() => deleteSet(en.exId, i)}
                 onCopy={() => copySet(en.exId, i)}
                 onUpdate={patch => updateSet(en.exId, i, patch)}
+                onToggleWarmup={() => toggleWarmup(en.exId, i)}
               />
             ))}
             <button className="btn ghost block sm" onClick={() => addSet(en.exId)}>＋ 添加一组</button>

@@ -70,7 +70,18 @@ export default function SettingsView() {
 
       <div className="section-title">数据</div>
       <div className="card">
-        <p className="dim small">所有数据只存在这台手机的浏览器里，换手机不会自动带走。定期导出一份 JSON 备份。</p>
+        <div className="row-between">
+          <span>体重目标 (kg)</span>
+          <input
+            className="input" style={{ width: 90, textAlign: 'center' }} inputMode="decimal"
+            placeholder="不设" defaultValue={settings.goalKg || ''}
+            onBlur={e => {
+              const v = parseFloat(e.target.value)
+              setSettings({ goalKg: Number.isFinite(v) && v > 20 && v < 300 ? v : null })
+            }}
+          />
+        </div>
+        <p className="dim small" style={{ marginTop: 10 }}>所有数据只存在这台手机的浏览器里，换手机不会自动带走。定期导出一份 JSON 备份。</p>
         <div className="row">
           <button className="btn primary" onClick={doExport}>导出备份</button>
           <button className="btn ghost" onClick={() => fileRef.current?.click()}>导入备份</button>
@@ -97,7 +108,7 @@ export default function SettingsView() {
         <button className="btn danger block" onClick={() => { if (confirm('清空全部数据？不可恢复，建议先导出备份。')) { resetAll(); toast('已清空') } }}>清空所有数据</button>
       </div>
 
-      <div className="page-foot dim small">GymGym v0.4.1</div>
+      <div className="page-foot dim small">GymGym v0.5.0</div>
     </div>
   )
 }

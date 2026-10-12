@@ -3,7 +3,8 @@
 import { best1RM } from './onerm.js'
 
 export function entryVolume(e) {
-  return (e.sets || []).reduce((sum, s) => sum + (s.done && s.kg > 0 && s.reps > 0 ? s.kg * s.reps : 0), 0)
+  // 热身组（w 标记）不计容量
+  return (e.sets || []).reduce((sum, s) => sum + (s.done && !s.w && s.kg > 0 && s.reps > 0 ? s.kg * s.reps : 0), 0)
 }
 
 export function workoutVolume(active) {
@@ -50,4 +51,20 @@ export function prefillFor(exId, workouts) {
     if (e && (e.sets || []).length) return e.sets.slice(0, 8).map(s => ({ reps: s.reps, kg: s.kg, done: false }))
   }
   return [{ reps: 10, kg: 0, done: false }]
+}
+
+/* 编辑/补记后重算一份训练文档：剔未完成组、重算容量、对照其余历史重判 PR。
+ * openGym 的「记录会从修正后的历史重新读出」。others = 不含本文档的其余训练。 */
+export function withStats(doc, others) {
+  const clean = {
+    ...doc,
+    entries: (doc.entries || [])
+      .map(e => ({ ...e, sets: (e.sets || []).filter(s => s.done) }))
+      .filter(e => e.sets.length > 0),
+  }
+  clean.volume = workoutVolume(clean)
+  const prs = findPRs(clean, others || [])
+  if (prs.length) clean.prs = prs
+  else delete clean.prs
+  return clean
 }

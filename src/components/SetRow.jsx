@@ -1,7 +1,8 @@
 import { useSwipeRow } from '../lib/use-swipe-row.js'
 
-/* 一组：重量 × 次数 + 完成勾。触屏上左滑删除、右滑复制（带底色提示）。 */
-export default function SetRow({ idx, set: s, type, onDone, onDel, onCopy, onUpdate }) {
+/* 一组：重量 × 次数 + 完成勾。触屏上左滑删除、右滑复制（带底色提示）。
+ * 点组号切换热身组（不计容量/PR）。 */
+export default function SetRow({ idx, set: s, type, onDone, onDel, onCopy, onUpdate, onToggleWarmup }) {
   const { dx, dragging, handlers } = useSwipeRow({ onLeft: onDel, onRight: onCopy })
 
   return (
@@ -11,7 +12,11 @@ export default function SetRow({ idx, set: s, type, onDone, onDel, onCopy, onUpd
       <div className={'set-row' + (s.done ? ' done' : '') + (dragging ? ' dragging' : '')}
         style={dx ? { transform: `translateX(${dx}px)` } : undefined}
         {...handlers}>
-        <span className="set-n">{idx + 1}</span>
+        <button
+          className={'set-n-btn' + (s.w ? ' warm' : '')}
+          title="点按切换热身组"
+          onClick={onToggleWarmup}
+        >{s.w ? '热' : idx + 1}</button>
         <input
           className="input set-input" inputMode="decimal"
           placeholder={type === 'time' ? '秒' : 'kg'}

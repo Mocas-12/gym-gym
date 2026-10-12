@@ -64,7 +64,7 @@ export function muscleLoad(workouts, days = 7, now = Date.now()) {
     if (!w || !w.start || w.start < cutoff) continue
     for (const e of w.entries || []) {
       if (!e.m || !MUSCLES.includes(e.m)) continue
-      const sets = (e.sets || []).filter(s => s.done).length
+      const sets = (e.sets || []).filter(s => s.done && !s.w).length
       if (!sets) continue
       stats[e.m] = stats[e.m] || { sets: 0, last: 0 }
       stats[e.m].sets += sets

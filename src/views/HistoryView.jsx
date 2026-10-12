@@ -3,15 +3,17 @@ import { useStore } from '../store/useStore.js'
 import { best1RM } from '../lib/onerm.js'
 import { e1rmSeries, trainedExercises, heatmap, muscleLoad, recoveryStatus } from '../lib/insights.js'
 import { Heatmap, LineChart, RecoveryList } from '../components/Charts.jsx'
+import WorkoutEdit from '../components/WorkoutEdit.jsx'
 
 const fmtDate = ts => new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 const fmtDur = ms => `${Math.round(ms / 60000)} 分钟`
 
 export default function HistoryView() {
-  const { workouts, bodyweight, deleteWorkout, customEx, allEx } = useStore()
+  const { workouts, bodyweight, deleteWorkout, customEx, allEx, settings } = useStore()
   const [openId, setOpenId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
   const [chartEx, setChartEx] = useState(null)
+  const [editing, setEditing] = useState(undefined) // undefined=关；null=补记；对象=编辑该训练
 
   /* 洞察数据 */
   const trained = useMemo(() => trainedExercises(workouts), [workouts])
@@ -56,7 +58,7 @@ export default function HistoryView() {
       {bodyweight.length > 1 && (
         <>
           <div className="section-title">体重曲线</div>
-          <div className="card"><WeightChart data={[...bodyweight].reverse()} /></div>
+          <div className="card"><WeightChart data={[...bodyweight].reverse()} goal={settings.goalKg} /></div>
         </>
       )}
       {trained.length > 0 && (
@@ -97,7 +99,10 @@ export default function HistoryView() {
         </>
       )}
 
-      <div className="section-title">训练记录</div>
+      <div className="row-between">
+        <div className="section-title" style={{ marginTop: 0 }}>训练记录</div>
+        <button className="btn ghost sm" onClick={() => setEditing(null)}>＋ 补记一次</button>
+      </div>
       {workouts.length === 0 && <p className="dim center">还没有训练记录，去首页开始第一次吧。</p>}
       {workouts.map(w => (
         <div key={w.id} className="card">
@@ -113,7 +118,7 @@ export default function HistoryView() {
               {(w.entries || []).map(e => (
                 <div key={e.exId} className="detail-ex">
                   <div className="card-title">{e.name}</div>
-                  <div className="mono dim small">{e.sets.map(s => `${s.kg ?? 0}×${s.reps}`).join('　')}</div>
+                  <div className="mono dim small">{e.sets.map(s => `${s.w ? '热' : ''}${s.kg ?? 0}×${s.reps}`).join('　')}</div>
                 </div>
               ))}
               {confirmDel === w.id ? (
@@ -122,36 +127,50 @@ export default function HistoryView() {
                   <button className="btn ghost" onClick={() => setConfirmDel(null)}>取消</button>
                 </div>
               ) : (
-                <button className="btn ghost sm" onClick={() => setConfirmDel(w.id)}>删除这条记录</button>
+                <div className="row">
+                  <button className="btn ghost sm" onClick={() => setEditing(w)}>编辑</button>
+                  <button className="btn ghost sm" onClick={() => setConfirmDel(w.id)}>删除</button>
+                </div>
               )}
             </div>
           )}
         </div>
       ))}
+
+      {editing !== undefined && <WorkoutEdit workout={editing} onClose={() => setEditing(undefined)} />}
     </div>
   )
 }
 
-function WeightChart({ data: raw }) {
+function WeightChart({ data: raw, goal }) {
   // 脏数据防御：只留数值型 kg，且至少两点才画
   const data = (raw || []).filter(e => e && Number.isFinite(e.kg))
   if (data.length < 2) return null
   const ks = data.map(e => e.kg)
-  const min = Math.min(...ks) - 0.5, max = Math.max(...ks) + 0.5
+  const lo = Math.min(...ks, goal || Infinity)
+  const hi = Math.max(...ks, goal || -Infinity)
+  const min = lo - 0.5, max = hi + 0.5
   const span = max - min || 1
   const W = 320, H = 90
   const pts = data.map((e, i) => [(i / Math.max(1, data.length - 1)) * W, H - 10 - ((e.kg - min) / span) * (H - 24)])
   const line = pts.map(p => p.join(',')).join(' ')
+  const goalY = goal ? H - 10 - ((goal - min) / span) * (H - 24) : null
   const last = data[data.length - 1]
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="spark">
         <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
         {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill="var(--accent)" />)}
+        {goal && (
+          <>
+            <line x1="0" x2={W} y1={goalY} y2={goalY} stroke="var(--dim)" strokeWidth="1.5" strokeDasharray="5 5" />
+            <text x={W - 2} y={goalY - 4} textAnchor="end" fontSize="10" fill="var(--dim)">目标 {goal}kg</text>
+          </>
+        )}
       </svg>
       <div className="row-between dim small">
         <span>{fmtDate(data[0].t ?? data[0].d)}</span>
-        <span>{data.length} 次记录</span>
+        <span>{data.length} 次记录{goal ? (last.kg <= goal ? ' · 🎉 已达目标' : ` · 距目标 ${(last.kg - goal).toFixed(1)}kg`) : ''}</span>
         <span>现在 {last.kg} kg</span>
       </div>
     </div>

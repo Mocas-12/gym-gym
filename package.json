@@ -1,7 +1,7 @@
 {
   "name": "gym-gym",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "type": "module",
   "license": "MIT",
   "scripts": {

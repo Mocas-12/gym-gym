@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
-import { finalizeWorkout, prefillFor } from '../lib/workout.js'
+import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
 
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
@@ -141,6 +141,35 @@ export const useStore = create(
         const a = get().active
         if (!a) return
         set({ active: { ...a, entries: a.entries.map(e => (e.exId === exId ? { ...e, restSec: sec } : e)) } })
+      },
+      /* 点组号切换热身组：不计容量/PR/1RM/恢复统计 */
+      toggleWarmup(exId, i) {
+        const a = get().active
+        if (!a) return
+        set({
+          active: {
+            ...a,
+            entries: a.entries.map(e =>
+              e.exId !== exId ? e : { ...e, sets: e.sets.map((s, j) => (j === i ? { ...s, w: !s.w } : s)) }
+            ),
+          },
+        })
+      },
+
+      /* ---- 历史编辑/补记：改完的文档重算容量与 PR（withStats），并按时间排序 ---- */
+      addWorkout(doc) {
+        const clean = withStats(doc, get().workouts)
+        if (!clean.entries.length) return null
+        set({ workouts: [clean, ...get().workouts].sort((a, b) => b.start - a.start) })
+        return clean
+      },
+      updateWorkout(id, patch) {
+        const cur = get().workouts.find(w => w?.id === id)
+        if (!cur) return null
+        const others = get().workouts.filter(w => w?.id !== id)
+        const clean = withStats({ ...cur, ...patch, id }, others)
+        set({ workouts: [clean, ...others].sort((a, b) => b.start - a.start) })
+        return clean
       },
 
       /* ---- 计划与模板 ---- */
