@@ -22,7 +22,7 @@ export const register = (url, name) => jsonFetch(url.replace(/\/$/, '') + '/api/
 export const pullData = (url, token) => jsonFetch(url.replace(/\/$/, '') + '/api/data', { token })
 export const pushData = (url, token, baseRev, state) =>
   jsonFetch(url.replace(/\/$/, '') + '/api/data', { method: 'PUT', token, body: { baseRev, state } })
-export const pushPublicKey = url => jsonFetch(url.replace(/\/$/, '') + '/api/push/public-key')
+export const pushPublicKey = (url, token) => jsonFetch(url.replace(/\/$/, '') + '/api/push/public-key', { token })
 
 export const subscribePush = (url, token, subscription) =>
   jsonFetch(url.replace(/\/$/, '') + '/api/push/subscribe', { method: 'POST', token, body: subscription })
@@ -56,8 +56,8 @@ export async function enablePush(serverUrl, token) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('此浏览器不支持推送')
   const perm = await Notification.requestPermission()
   if (perm !== 'granted') throw new Error('通知权限未授予')
-  const { ok, data } = await pushPublicKey(serverUrl)
-  if (!ok || !data.key) throw new Error('服务器公钥获取失败')
+  const { ok, data } = await pushPublicKey(serverUrl, token)
+  if (!ok || !data.key) throw new Error('服务器公钥获取失败（' + (data.error || '令牌可能失效，试试断开后重新连接') + '）')
   const reg = await navigator.serviceWorker.ready
   const keyBytes = Uint8Array.from(atob(data.key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
   const sub = await reg.pushManager.subscribe({
