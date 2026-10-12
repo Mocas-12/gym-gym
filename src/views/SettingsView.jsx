@@ -13,6 +13,11 @@ export default function SettingsView() {
   const [canPrompt, setCanPrompt] = useState(hasInstallPrompt)
   const [installSheet, setInstallSheet] = useState(false)
   useEffect(() => onInstallAvailability(setCanPrompt), [])
+  const [vp] = useState(() => ({
+    w: window.innerWidth, h: window.innerHeight,
+    dpr: window.devicePixelRatio, sw: screen.width, sh: screen.height,
+    standalone: isStandalone(),
+  }))
 
   const install = async () => {
     if (canPrompt) {
@@ -138,7 +143,10 @@ export default function SettingsView() {
         <button className="btn danger block" onClick={() => { if (confirm('清空全部数据？不可恢复，建议先导出备份。')) { resetAll(); toast('已清空') } }}>清空所有数据</button>
       </div>
 
-      <div className="page-foot dim small">GymGym v0.6.1</div>
+      {/* 设备视口调试信息：排查真机「底栏不贴边」类问题的一手数据 */}
+      <div className="page-foot dim small mono">
+        GymGym v0.6.1 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} · {vp.standalone ? '主屏幕' : '浏览器'}
+      </div>
     </div>
   )
 }

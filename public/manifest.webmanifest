@@ -1,11 +1,13 @@
 {
   "name": "GymGym · 健身记录",
   "short_name": "GymGym",
+  "id": "/gym-gym/",
   "description": "纯本地的健身训练记录：组数、次数、重量、休息计时，数据只存在你手机里。",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0c1015",
   "theme_color": "#0c1015",
