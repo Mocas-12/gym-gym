@@ -35,7 +35,8 @@ export const useStore = create(
         const { workouts } = get()
         const t = nextTarget(cfg, workouts, exId)
         if (t) {
-          return { sets: [0, 1, 2].map(() => ({ kg: t.kg, reps: t.reps, done: false })), note: t.note }
+          const n = t.sets || 3
+          return { sets: Array.from({ length: n }, () => ({ kg: t.kg, reps: t.reps, done: false })), note: t.note }
         }
         return { sets: prefillFor(exId, workouts), note: null }
       },
@@ -45,7 +46,7 @@ export const useStore = create(
           const ex = get().allEx().find(e => e.id === id)
           const { sets, note } = get().buildSets(id, routine?.cfg || null)
           return {
-            exId: id, name: ex?.n || id, type: ex?.type || 'reps', m: ex?.m || null,
+            exId: id, name: ex?.n || id, type: ex?.type || 'reps', m: ex?.m || null, eq: ex?.eq || null,
             restSec: ex?.rest ?? null, sup: supIndexOf(routine, id),
             sets, ...(note ? { note } : {}),
           }
@@ -61,7 +62,7 @@ export const useStore = create(
           active: {
             ...a,
             entries: [...a.entries, {
-              exId, name: ex?.n || exId, type: ex?.type || 'reps', m: ex?.m || null,
+              exId, name: ex?.n || exId, type: ex?.type || 'reps', m: ex?.m || null, eq: ex?.eq || null,
               restSec: ex?.rest ?? null, sup: supIndexOf(routine, exId),
               sets, ...(note ? { note } : {}),
             }],

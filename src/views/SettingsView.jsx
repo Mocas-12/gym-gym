@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import InstallGuide from '../components/InstallGuide.jsx'
 import { hasInstallPrompt, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
+import { STANDARD_PLATES } from '../lib/plates.js'
 
 export default function SettingsView() {
   const { settings, setSettings, exportState, importState, resetAll } = useStore()
@@ -66,6 +67,35 @@ export default function SettingsView() {
           <span>休息结束震动</span>
           <Toggle on={settings.vibrate} onClick={() => setSettings({ vibrate: !settings.vibrate })} />
         </div>
+        <div className="row-between">
+          <span>记录 RIR 努力度</span>
+          <Toggle on={settings.showRir ?? true} onClick={() => setSettings({ showRir: !(settings.showRir ?? true) })} />
+        </div>
+        <p className="dim small">RIR = 力竭前还剩的次数余力（R0 力竭、R2 还剩 2 次）。完成一组后点 R 芯片记录。</p>
+      </div>
+
+      <div className="section-title">杠铃配重</div>
+      <div className="card">
+        <div className="row-between">
+          <span>杠铃杆重量</span>
+          <div className="row" style={{ marginTop: 0 }}>
+            {[15, 20, 25].map(b => (
+              <button key={b} className={'chip' + ((settings.plates?.bar ?? 20) === b ? ' on' : '')}
+                onClick={() => setSettings({ plates: { ...(settings.plates || { avail: STANDARD_PLATES }), bar: b } })}>{b}kg</button>
+            ))}
+          </div>
+        </div>
+        <p className="dim small" style={{ marginTop: 10 }}>拥有的杠铃片规格（点按切换）——配重提示按这个算：</p>
+        <div className="plan-chips">
+          {STANDARD_PLATES.map(p => {
+            const avail = settings.plates?.avail ?? STANDARD_PLATES
+            const on = avail.includes(p)
+            return (
+              <button key={p} className={'chip' + (on ? ' on' : '')}
+                onClick={() => setSettings({ plates: { bar: settings.plates?.bar ?? 20, avail: on ? avail.filter(x => x !== p) : [...avail, p] } })}>{p}</button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="section-title">数据</div>
@@ -108,7 +138,7 @@ export default function SettingsView() {
         <button className="btn danger block" onClick={() => { if (confirm('清空全部数据？不可恢复，建议先导出备份。')) { resetAll(); toast('已清空') } }}>清空所有数据</button>
       </div>
 
-      <div className="page-foot dim small">GymGym v0.5.0</div>
+      <div className="page-foot dim small">GymGym v0.6.0</div>
     </div>
   )
 }

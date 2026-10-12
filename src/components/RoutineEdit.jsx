@@ -7,7 +7,10 @@ import { SCHEMES } from '../lib/progression.js'
 export const cfgLabel = c =>
   !c || c.scheme === 'none' ? '不自动加重'
     : c.scheme === 'linear' ? `线性 ${c.inc}kg · 目标${c.reps}次`
-      : `双进程 ${c.min}-${c.max}次 · +${c.inc}kg`
+      : c.scheme === 'greyskull' ? `Greyskull ${c.reps}次 · +${c.inc}kg`
+        : c.scheme === 'triple' ? `三进程 ${c.min}-${c.max}次 × ${c.sets}组`
+          : c.scheme === 'time' ? `计时 +${c.incSec}s · 目标 ${c.targetSec}秒`
+            : `双进程 ${c.min}-${c.max}次 · +${c.inc}kg`
 
 /* 模板编辑器：名称、动作列表（排序/超级组/独立休息）、渐进规则。
  * supersets 按「相邻行同组」建模：joins[i]=true 表示第 i 行与上一行同一超级组。 */
@@ -54,9 +57,9 @@ export default function RoutineEdit({ id, onClose }) {
         </div>
         <div className="sheet-body">
           <div className="section-title" style={{ marginTop: 6 }}>渐进规则 · <span className="accent">{cfgLabel(cfg)}</span></div>
-          <div className="row" style={{ marginTop: 4 }}>
+          <div className="row wrap" style={{ marginTop: 4 }}>
             {SCHEMES.map(s => (
-              <button key={s.id} className={'chip grow' + (cfg.scheme === s.id ? ' on' : '')} onClick={() => setCfg({ ...cfg, scheme: s.id })}>{s.name}</button>
+              <button key={s.id} className={'chip' + (cfg.scheme === s.id ? ' on' : '')} onClick={() => setCfg({ ...cfg, scheme: s.id })}>{s.name}</button>
             ))}
           </div>
           {cfg.scheme === 'linear' && (
@@ -65,11 +68,34 @@ export default function RoutineEdit({ id, onClose }) {
               <NumField label="目标次数" value={cfg.reps} step={1} onChange={v => setCfg({ ...cfg, reps: v })} />
             </div>
           )}
+          {cfg.scheme === 'greyskull' && (
+            <div className="cfg-row">
+              <NumField label="加重 kg" value={cfg.inc} step={0.5} onChange={v => setCfg({ ...cfg, inc: v })} />
+              <NumField label="目标次数" value={cfg.reps} step={1} onChange={v => setCfg({ ...cfg, reps: v })} />
+              <NumField label="冲刺加成 kg" value={cfg.bonusInc} step={0.5} onChange={v => setCfg({ ...cfg, bonusInc: v })} />
+            </div>
+          )}
           {cfg.scheme === 'double' && (
             <div className="cfg-row">
               <NumField label="加重 kg" value={cfg.inc} step={0.5} onChange={v => setCfg({ ...cfg, inc: v })} />
               <NumField label="最少次数" value={cfg.min} step={1} onChange={v => setCfg({ ...cfg, min: v })} />
               <NumField label="最多次数" value={cfg.max} step={1} onChange={v => setCfg({ ...cfg, max: v })} />
+            </div>
+          )}
+          {cfg.scheme === 'triple' && (
+            <div className="cfg-row">
+              <NumField label="加重 kg" value={cfg.inc} step={0.5} onChange={v => setCfg({ ...cfg, inc: v })} />
+              <NumField label="次数区间" value={cfg.min} step={1} onChange={v => setCfg({ ...cfg, min: v })} />
+              <NumField label="至" value={cfg.max} step={1} onChange={v => setCfg({ ...cfg, max: v })} />
+              <NumField label="组数" value={cfg.sets} step={1} onChange={v => setCfg({ ...cfg, sets: v })} />
+              <NumField label="加到" value={cfg.setsMax} step={1} onChange={v => setCfg({ ...cfg, setsMax: v })} />
+            </div>
+          )}
+          {cfg.scheme === 'time' && (
+            <div className="cfg-row">
+              <NumField label="目标秒数" value={cfg.targetSec} step={5} onChange={v => setCfg({ ...cfg, targetSec: v })} />
+              <NumField label="每次加秒" value={cfg.incSec} step={5} onChange={v => setCfg({ ...cfg, incSec: v })} />
+              <NumField label="上限秒" value={cfg.maxSec} step={5} onChange={v => setCfg({ ...cfg, maxSec: v })} />
             </div>
           )}
 

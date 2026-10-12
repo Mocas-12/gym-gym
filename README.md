@@ -40,7 +40,9 @@
 ## ✨ Features
 
 - 📅 **Weekly plan / rotation**: assign a routine to each weekday, or run a rotation (A → B → C → A) that follows whatever you actually did; Home shows today's session and, on rest days, when the next one is
-- 📈 **Progression engine**: linear and double-progression schemes auto-advance your working weights — hit all target reps → load goes up; miss → it doesn't; stall twice → deload. Every target shows *why* it is that number (openGym's core idea, rebuilt)
+- 📈 **Progression engine**: five auto-progression schemes per routine — linear, double progression, Greyskull LP (bonus for strong AMRAPs), triple progression (reps → sets → load) and time-based for planks/cardio; missed reps never add load, stalls trigger a deload, and every target shows *why* it is that number
+- 🧮 **Plate math**: barbell entries show the per-side plate breakdown for your bar and the plates you own
+- 💪 **RIR effort marking**: optionally record reps-in-reserve per set (R0 = failure), shown in history
 - 🔗 **Supersets**: pair adjacent exercises in the routine editor; the workout flags the pair and the rest-timer tells you to alternate
 - 👆 **Swipe a set**: left to delete, right to copy — plus per-exercise rest override right on the workout screen
 - ✏️ **Edit & backfill history**: fix a past workout's date, sets or exercises, or log a session you did on paper — volume and PRs are re-read from the corrected history

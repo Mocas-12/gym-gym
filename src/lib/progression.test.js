@@ -52,6 +52,55 @@ describe('线性', () => {
   })
 })
 
+describe('Greyskull LP', () => {
+  const gk = { scheme: 'greyskull', inc: 2.5, reps: 5, bonusInc: 2.5 }
+  it('全中 → 加重', () => {
+    const ws = [w('bench', [{ kg: 60, reps: 5 }, { kg: 60, reps: 5 }, { kg: 60, reps: 6 }])]
+    expect(nextTarget(gk, ws, 'bench')).toMatchObject({ kg: 62.5 })
+  })
+  it('最后一组冲到目标+2 → 双倍加重', () => {
+    const ws = [w('bench', [{ kg: 60, reps: 5 }, { kg: 60, reps: 5 }, { kg: 60, reps: 7 }])]
+    expect(nextTarget(gk, ws, 'bench')).toMatchObject({ kg: 65 })
+  })
+  it('连续两次没中 → 减载', () => {
+    const ws = [w('bench', [{ kg: 65, reps: 4 }]), w('bench', [{ kg: 65, reps: 3 }], 3)]
+    expect(nextTarget(gk, ws, 'bench').kg).toBe(deloadKg(65))
+  })
+})
+
+describe('三进程', () => {
+  const tp = { scheme: 'triple', inc: 2.5, min: 6, max: 10, sets: 3, setsMax: 4 }
+  it('全部顶到 max 但组数没满 → 加一组', () => {
+    const ws = [w('bench', [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }])]
+    const t = nextTarget(tp, ws, 'bench')
+    expect(t).toMatchObject({ kg: 60, reps: 10, sets: 4 })
+  })
+  it('组数加满且全中 → 加重回下限和基础组数', () => {
+    const ws = [w('bench', [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }])]
+    expect(nextTarget(tp, ws, 'bench')).toMatchObject({ kg: 62.5, reps: 6, sets: 3 })
+  })
+  it('区间内 → 次数上推', () => {
+    const ws = [w('bench', [{ kg: 60, reps: 8 }, { kg: 60, reps: 7 }, { kg: 60, reps: 8 }])]
+    expect(nextTarget(tp, ws, 'bench')).toMatchObject({ kg: 60, reps: 9, sets: 3 })
+  })
+})
+
+describe('计时递增', () => {
+  const tm = { scheme: 'time', targetSec: 45, incSec: 5, maxSec: 120 }
+  it('全部达标 → 目标秒数增加（秒存 kg 字段）', () => {
+    const ws = [w('plank', [{ kg: 45 }, { kg: 45 }, { kg: 50 }])]
+    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ kg: 50, reps: null })
+  })
+  it('没达标 → 目标不变', () => {
+    const ws = [w('plank', [{ kg: 40 }, { kg: 45 }])]
+    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ kg: 45 })
+  })
+  it('到上限后保持', () => {
+    const ws = [w('plank', [{ kg: 120 }, { kg: 130 }])]
+    expect(nextTarget({ ...tm, targetSec: 120 }, ws, 'plank').note).toContain('上限')
+  })
+})
+
 describe('边界', () => {
   it('无历史 → null（交给预填）', () => {
     expect(nextTarget(cfg, [], 'bench')).toBeNull()

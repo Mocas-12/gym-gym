@@ -118,7 +118,7 @@ export default function HistoryView() {
               {(w.entries || []).map(e => (
                 <div key={e.exId} className="detail-ex">
                   <div className="card-title">{e.name}</div>
-                  <div className="mono dim small">{e.sets.map(s => `${s.w ? '热' : ''}${s.kg ?? 0}×${s.reps}`).join('　')}</div>
+                  <div className="mono dim small">{e.sets.map(s => `${s.w ? '热' : ''}${s.kg ?? 0}×${s.reps}${s.rir != null ? ` R${s.rir}` : ''}`).join('　')}</div>
                 </div>
               ))}
               {confirmDel === w.id ? (

@@ -4,6 +4,7 @@ import { useUI } from '../store/useUI.js'
 import RestTimer from '../components/RestTimer.jsx'
 import ExercisePicker from '../components/ExercisePicker.jsx'
 import SetRow from '../components/SetRow.jsx'
+import { platesFor, fmtPlates, STANDARD_PLATES } from '../lib/plates.js'
 
 const fmtElapsed = ms => {
   const s = Math.floor(ms / 1000)
@@ -64,6 +65,15 @@ export default function WorkoutView() {
   }
 
   const restOf = en => en.restSec ?? settings.restSec
+  const plates = settings.plates || { bar: 20, avail: STANDARD_PLATES }
+  /* 杠铃动作：按最后填过的重量算每边配重 */
+  const plateLine = en => {
+    if (en.eq !== '杠铃') return null
+    const kg = [...(en.sets || [])].reverse().find(s => s.kg > 0)?.kg
+    if (!kg) return null
+    const { perSide, leftover, tooLight } = platesFor(kg, plates.bar, plates.avail)
+    return tooLight ? `${kg}kg 轻于空杆（${plates.bar}kg）` : `每边：${fmtPlates(perSide)}${leftover ? ` · 差 ${leftover}kg 没有合适的片` : ''}`
+  }
 
   return (
     <div className="page workout-page">
@@ -100,6 +110,7 @@ export default function WorkoutView() {
               </div>
             </div>
             {en.note && <div className="target-note">{en.note}</div>}
+            {plateLine(en) && <div className="plate-line mono">{plateLine(en)}</div>}
             {restPickFor === en.exId && (
               <div className="rest-picker">
                 {REST_OPTS.map(s => (
@@ -114,6 +125,7 @@ export default function WorkoutView() {
                 idx={i}
                 set={s}
                 type={en.type}
+                showRir={settings.showRir ?? true}
                 onDone={() => done(en, i)}
                 onDel={() => deleteSet(en.exId, i)}
                 onCopy={() => copySet(en.exId, i)}
