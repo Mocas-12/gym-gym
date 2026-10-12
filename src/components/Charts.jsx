@@ -1,4 +1,4 @@
-/* 洞察图表：全年热力图（GitHub 风格）、1RM 折线、肌群恢复条。纯展示，数据来自 lib/insights.js */
+/* 洞察图表：全年热力图（GitHub 风格）、1RM 折线。纯展示，数据来自 lib/insights.js */
 
 const VOL_LEVELS = [0, 1000, 3000, 6000] // 容量分档阈值 kg
 
@@ -28,8 +28,7 @@ export function Heatmap({ data }) {
   )
 }
 
-export function LineChart({ data, unit = 'kg' }) {
-  // data: [{t, v}] 升序
+export function LineChart({ data, unit = 'kg' }) {  // data: [{t, v}] 升序
   if (!data || data.length < 2) return <p className="dim small">至少两次训练后出曲线。</p>
   const W = 320, H = 110, pad = 8
   const vs = data.map(x => x.v)
@@ -52,22 +51,3 @@ export function LineChart({ data, unit = 'kg' }) {
   )
 }
 
-export function RecoveryList({ items }) {
-  if (!items.length) return <p className="dim small">近 7 天还没有训练记录。</p>
-  return (
-    <div>
-      {items.map(x => (
-        <div key={x.m} className="rec-row">
-          <span className="rec-m">{x.m}</span>
-          <div className="rec-bar">
-            <i style={{ width: x.pct + '%' }} className={x.recovered ? 'ok' : ''} />
-          </div>
-          <span className={'rec-tag' + (x.recovered ? ' ok' : '')}>
-            {x.recovered ? '已恢复' : `恢复中 ${x.pct}%`}
-          </span>
-          <span className="dim small mono rec-sets">{x.sets}组</span>
-        </div>
-      ))}
-    </div>
-  )
-}

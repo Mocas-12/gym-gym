@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { best1RM } from '../lib/onerm.js'
-import { e1rmSeries, trainedExercises, heatmap, muscleLoad, recoveryStatus } from '../lib/insights.js'
-import { Heatmap, LineChart, RecoveryList } from '../components/Charts.jsx'
+import { e1rmSeries, trainedExercises, heatmap } from '../lib/insights.js'
+import { regionLoad, volumeLevels, recoveryLevels, neglectedLevels } from '../lib/muscles.js'
+import { Heatmap, LineChart } from '../components/Charts.jsx'
+import BodyMap from '../components/BodyMap.jsx'
 import WorkoutEdit from '../components/WorkoutEdit.jsx'
 
 const fmtDate = ts => new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
@@ -14,6 +16,7 @@ export default function HistoryView() {
   const [confirmDel, setConfirmDel] = useState(null)
   const [chartEx, setChartEx] = useState(null)
   const [editing, setEditing] = useState(undefined) // undefined=关；null=补记；对象=编辑该训练
+  const [mapMode, setMapMode] = useState('vol')
 
   /* 洞察数据 */
   const trained = useMemo(() => trainedExercises(workouts), [workouts])
@@ -25,7 +28,12 @@ export default function HistoryView() {
   const activeEx = chartEx || trained[0]
   const series = useMemo(() => (activeEx ? e1rmSeries(workouts, activeEx) : []), [workouts, activeEx])
   const grid = useMemo(() => heatmap(workouts), [workouts])
-  const recovering = useMemo(() => recoveryStatus(muscleLoad(workouts, 7)), [workouts])
+  const mapLevels = useMemo(() =>
+    mapMode === 'rec' ? recoveryLevels(workouts)
+      : mapMode === 'gap' ? neglectedLevels(workouts)
+        : volumeLevels(regionLoad(workouts, 7)),
+  [workouts, mapMode])
+  const MAP_HINT = { vol: '近 7 天训练量分布 · 越亮练得越多', rec: '恢复进度 · 越亮恢复越完整', gap: '越亮 = 越久没练' }
 
   /* 每个动作的历史最佳（估计 1RM）——历史数据可能有脏值，逐条过滤 */
   const prs = useMemo(() => {
@@ -82,8 +90,16 @@ export default function HistoryView() {
         </div>
       </div>
 
-      <div className="section-title">肌群恢复（大肌群 72h · 小肌群 48h）</div>
-      <div className="card"><RecoveryList items={recovering} /></div>
+      <div className="section-title">肌肉图</div>
+      <div className="card">
+        <div className="row" style={{ marginTop: 0 }}>
+          <button className={'chip grow' + (mapMode === 'vol' ? ' on' : '')} onClick={() => setMapMode('vol')}>容量</button>
+          <button className={'chip grow' + (mapMode === 'rec' ? ' on' : '')} onClick={() => setMapMode('rec')}>恢复</button>
+          <button className={'chip grow' + (mapMode === 'gap' ? ' on' : '')} onClick={() => setMapMode('gap')}>盲区</button>
+        </div>
+        <BodyMap levels={mapLevels} />
+        <div className="dim small center" style={{ marginTop: 6 }}>{MAP_HINT[mapMode]}</div>
+      </div>
 
       {prs.length > 0 && (
         <>

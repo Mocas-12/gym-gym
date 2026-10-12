@@ -302,6 +302,17 @@ button.card { cursor: pointer; display: block; }
 .hm-cell.l4 { background: var(--accent); }
 .ex-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
 .ex-chips .chip { flex-shrink: 0; }
+/* ---- v0.7 肌肉图 ---- */
+.bm-holder { min-height: 150px; }
+.bm-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.bm-v { width: 100%; height: auto; display: block; }
+.bm-sil { fill: var(--card-2); stroke: var(--line); stroke-width: 0.5; }
+.bm-m { fill: rgba(163, 230, 53, 0.07); stroke: rgba(163, 230, 53, 0.2); stroke-width: 0.4; transition: fill 0.3s; }
+.bm-m.l1 { fill: rgba(163, 230, 53, 0.24); }
+.bm-m.l2 { fill: rgba(163, 230, 53, 0.44); }
+.bm-m.l3 { fill: rgba(163, 230, 53, 0.66); }
+.bm-m.l4 { fill: rgba(163, 230, 53, 0.92); }
+
 .rec-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .rec-row + .rec-row { border-top: 1px solid var(--line); }
 .rec-m { width: 34px; font-weight: 650; font-size: 14px; flex-shrink: 0; }
