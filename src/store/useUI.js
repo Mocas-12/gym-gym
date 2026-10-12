@@ -1,5 +1,7 @@
 /* 短暂 UI 状态：休息倒计时、toast。不持久化。 */
 import { create } from 'zustand'
+import { useStore } from './useStore.js'
+import { restPush, restPushCancel } from '../lib/sync.js'
 
 let audioCtx = null
 function beep(times = 3) {
@@ -24,11 +26,21 @@ export const useUI = create((set, get) => ({
   restUntil: 0,
   restLabel: '',
   toastMsg: '',
+  restPushId: null,
   startRest(sec, label = '') {
     set({ restUntil: Date.now() + sec * 1000, restLabel: label })
+    // 已配置云同步 → 服务器定时推送（手表随 iPhone 镜像），页面被冻结也能收到
+    const { sync } = useStore.getState()
+    if (sync.url && sync.token && sec >= 30) {
+      restPush(sync.url, sync.token, sec, label).then(r => { if (r?.id) set({ restPushId: r.id }) })
+    }
   },
   addRest(sec) { set({ restUntil: Math.max(get().restUntil, Date.now()) + sec * 1000 }) },
-  stopRest() { set({ restUntil: 0, restLabel: '' }) },
+  stopRest() {
+    const { sync, restPushId } = useStore.getState()
+    if (restPushId) restPushCancel(sync.url, sync.token, restPushId)
+    set({ restUntil: 0, restLabel: '', restPushId: null })
+  },
   finishRest() {
     const { settings } = useStore.getState()
     if (settings.vibrate && navigator.vibrate) navigator.vibrate([180, 90, 180, 90, 320])

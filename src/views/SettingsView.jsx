@@ -4,6 +4,8 @@ import { useUI } from '../store/useUI.js'
 import InstallGuide from '../components/InstallGuide.jsx'
 import { hasInstallPrompt, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
 import { STANDARD_PLATES } from '../lib/plates.js'
+import { register, pullData, enablePush, testPush } from '../lib/sync.js'
+import SyncCard from './SyncCard.jsx'
 
 export default function SettingsView() {
   const { settings, setSettings, exportState, importState, resetAll } = useStore()
@@ -124,6 +126,9 @@ export default function SettingsView() {
         </div>
       </div>
 
+      <div className="section-title">同步与推送（可选）</div>
+      <SyncCard />
+
       <div className="section-title">添加到主屏幕</div>
       {standalone ? (
         <div className="card">
@@ -145,7 +150,7 @@ export default function SettingsView() {
 
       {/* 设备视口调试信息：排查真机「底栏不贴边」类问题的一手数据 */}
       <div className="page-foot dim small mono">
-        GymGym v0.7.0 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} · {vp.standalone ? '主屏幕' : '浏览器'}
+        GymGym v0.8.0 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} · {vp.standalone ? '主屏幕' : '浏览器'}
       </div>
     </div>
   )

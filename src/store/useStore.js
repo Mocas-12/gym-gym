@@ -6,6 +6,7 @@ import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
 import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
+import { pullData, pushData } from '../lib/sync.js'
 
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
 const uid = () => [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 11)
@@ -18,6 +19,9 @@ const supIndexOf = (routine, exId) => {
   return i >= 0 ? i : null
 }
 
+/* 本机最后一次数据改动时间：云同步冲突时判断「双方都有改动」用 */
+let lastChangeAt = 0
+
 export const useStore = create(
   persist(
     (set, get) => ({
@@ -25,6 +29,7 @@ export const useStore = create(
       customEx: [],          // 用户自建练习
       routines: PRESET_ROUTINES,
       plan: { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
+      sync: { url: '', token: '', uid: '', rev: 0, lastSync: 0 },
       workouts: [],          // {id, d, name, rid, start, end, entries, volume, prs}
       bodyweight: [],        // {d, t, kg}
       active: null,          // 进行中的训练，结构同 workouts 条目
@@ -173,6 +178,49 @@ export const useStore = create(
         return clean
       },
 
+      /* ---- 云同步（可选微后端，见 docs/SYNC_PUSH.md）----
+       * 文档级 LWW：push 带 baseRev，409 时按「最后改动时间」新者胜。 */
+      setSync(patch) { set({ sync: { ...get().sync, ...patch } }) },
+      adoptRemote(state, rev) {
+        const cur = get()
+        set({
+          settings: { restSec: 90, sound: true, vibrate: true, showRir: true, ...state.settings },
+          customEx: Array.isArray(state.customEx) ? state.customEx : [],
+          routines: (Array.isArray(state.routines) ? state.routines : []).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
+          plan: state.plan || cur.plan,
+          workouts: Array.isArray(state.workouts) ? state.workouts : [],
+          bodyweight: Array.isArray(state.bodyweight) ? state.bodyweight : [],
+          sync: { ...cur.sync, rev, lastSync: Date.now() },
+        })
+      },
+      async syncNow() {
+        const s = get().sync
+        if (!s.url || !s.token) return 'off'
+        // active（进行中的训练）是设备本地的，不上云
+        const { active, sync: _s, ...doc } = get()
+        const snapshot = { ...doc, _ts: Date.now() }
+        const r = await pushData(s.url, s.token, s.rev, snapshot)
+        if (r.ok) { get().setSync({ rev: r.data.rev, lastSync: Date.now() }); return 'synced' }
+        if (r.status !== 409) return 'error'
+        // 冲突：另一台设备写过。本机无未同步改动 → 直接采纳云端；
+        // 双方都有改动 → 谁最后改动谁胜（文档级 LWW）。
+        const server = r.data
+        const dirty = lastChangeAt > s.lastSync
+        if (!dirty) {
+          if (server.state) get().adoptRemote(server.state, server.rev)
+          else get().setSync({ rev: server.rev, lastSync: Date.now() })
+          return 'adopted'
+        }
+        if ((snapshot._ts || 0) >= (server.state?._ts || 0)) {
+          const f = await pushData(s.url, s.token, server.rev, snapshot)
+          if (f.ok) { get().setSync({ rev: f.data.rev, lastSync: Date.now() }); return 'overwritten' }
+        } else {
+          if (server.state) get().adoptRemote(server.state, server.rev)
+          return 'adopted'
+        }
+        return 'conflict'
+      },
+
       /* ---- 计划与模板 ---- */
       setPlanMode(mode) { set({ plan: { ...get().plan, mode } }) },
       assignDay(day, rid) {
@@ -238,24 +286,42 @@ export const useStore = create(
     }),
     {
       name: 'gym_gym_v1',
-      version: 3,
+      version: 4,
       /* v1→v2：补 plan 与 routine 的 cfg/supersets；v3：清洗脏数据——
        * 真机上曾出现 workouts 数组混入 null 导致历史页崩溃（ErrorBoundary 兜住）。
-       * 迁移在每次版本升级时执行，把不合格的记录整个滤掉。 */
+       * v4：加云同步配置。 */
       migrate: (p, ver) => {
         if (ver < 2) {
           p.plan = p.plan || { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] }
           p.routines = (p.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r }))
         }
+        if (ver < 4) p.sync = p.sync || { url: '', token: '', uid: '', rev: 0, lastSync: 0 }
         p.workouts = (Array.isArray(p.workouts) ? p.workouts : []).filter(w => w && typeof w === 'object' && Array.isArray(w.entries))
         p.bodyweight = (Array.isArray(p.bodyweight) ? p.bodyweight : []).filter(e => e && typeof e === 'object')
         p.customEx = (Array.isArray(p.customEx) ? p.customEx : []).filter(e => e && typeof e === 'object' && e.id)
         return p
       },
+      onRehydrateStorage: () => state => {
+        // 启动即同步一次：云端有更新就拉下来，本机有欠账就推上去
+        lastChangeAt = 0
+        if (state?.sync?.url && state?.sync?.token) state.syncNow?.()
+      },
       partialize: s => ({
-        settings: s.settings, customEx: s.customEx, routines: s.routines, plan: s.plan,
+        settings: s.settings, customEx: s.customEx, routines: s.routines, plan: s.plan, sync: s.sync,
         workouts: s.workouts, bodyweight: s.bodyweight, active: s.active,
       }),
     }
   )
 )
+
+/* 任意数据改动 → 记录时间；已配置云同步时：每 60s 推一次欠账、回前台推一次 */
+useStore.subscribe(() => { lastChangeAt = Date.now() })
+setInterval(() => {
+  const s = useStore.getState()
+  if (s.sync.url && s.sync.token && lastChangeAt > s.sync.lastSync) s.syncNow()
+}, 60000)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return
+  const s = useStore.getState()
+  if (s.sync.url && s.sync.token && lastChangeAt > s.sync.lastSync) s.syncNow()
+})
