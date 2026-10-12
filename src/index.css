@@ -29,13 +29,13 @@ body {
 .screen { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 /* 休息倒计时条悬浮在底部时，页面内容给它让位（否则训练页底部按钮被挡住点不到） */
 .rest-open .page { padding-bottom: calc(185px + var(--safe-b)); }
-.page { padding: calc(14px + var(--safe-t)) 16px calc(96px + var(--safe-b)); max-width: 560px; margin: 0 auto; }
+.page { padding: calc(14px + var(--safe-t)) 16px calc(24px + var(--safe-b)); max-width: 560px; margin: 0 auto; }
+/* 标签栏是布局内的常驻底栏（不用 fixed：iOS 上 fixed+bottom 首帧会错位脱离底边） */
 .tabbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  flex-shrink: 0;
   display: flex; justify-content: space-around;
   padding: 6px 8px calc(6px + var(--safe-b));
-  background: rgba(12, 16, 21, 0.92);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  background: var(--bg);
   border-top: 1px solid var(--line);
 }
 .tab {
@@ -286,6 +286,6 @@ button.card { cursor: pointer; display: block; }
 
 /* ---- 桌面端兜底（手机为主） ---- */
 @media (min-width: 700px) {
-  .page { padding-bottom: 40px; }
-  .tabbar { left: 50%; transform: translateX(-50%); max-width: 560px; border-radius: 18px 18px 0 0; border: 1px solid var(--line); border-bottom: 0; }
+  .page { padding-bottom: 32px; }
+  .tabbar { max-width: 560px; width: 100%; margin: 0 auto; border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; }
 }

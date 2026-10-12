@@ -21,7 +21,8 @@ export const deloadKg = (kg, pct = 0.1) => round05(kg * (1 - pct))
 export function sessionsOf(workouts, exId, n = 2) {
   const out = []
   for (const w of workouts || []) {
-    const e = (w.entries || []).find(x => x.exId === exId)
+    if (!w) continue
+    const e = (w.entries || []).find(x => x?.exId === exId)
     const sets = e ? (e.sets || []).filter(s => s.done && s.kg > 0 && s.reps > 0) : null
     if (sets && sets.length) { out.push(sets); if (out.length >= n) break }
   }

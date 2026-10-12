@@ -9,8 +9,9 @@ const dayKey = ts => new Date(ts).toISOString().slice(0, 10)
 export function e1rmSeries(workouts, exId) {
   const byDay = {}
   for (const w of workouts || []) {
+    if (!w || !w.start) continue
     for (const e of w.entries || []) {
-      if (e.exId !== exId) continue
+      if (e?.exId !== exId) continue
       const v = best1RM(e.sets)
       if (v <= 0) continue
       const k = dayKey(w.start)
@@ -26,8 +27,9 @@ export function e1rmSeries(workouts, exId) {
 export function trainedExercises(workouts) {
   const seen = []
   for (const w of workouts || []) {
+    if (!w) continue
     for (const e of w.entries || []) {
-      if (!seen.includes(e.exId)) seen.push(e.exId)
+      if (e && !seen.includes(e.exId)) seen.push(e.exId)
     }
   }
   return seen
@@ -37,6 +39,7 @@ export function trainedExercises(workouts) {
 export function heatmap(workouts, days = 364, now = Date.now()) {
   const byDay = {}
   for (const w of workouts || []) {
+    if (!w || !w.start) continue
     const k = dayKey(w.start)
     byDay[k] = (byDay[k] || 0) + (w.volume || 0)
   }
@@ -58,7 +61,7 @@ export function muscleLoad(workouts, days = 7, now = Date.now()) {
   const stats = {}
   const cutoff = now - days * DAY
   for (const w of workouts || []) {
-    if (w.start < cutoff) continue
+    if (!w || !w.start || w.start < cutoff) continue
     for (const e of w.entries || []) {
       if (!e.m || !MUSCLES.includes(e.m)) continue
       const sets = (e.sets || []).filter(s => s.done).length

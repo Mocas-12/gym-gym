@@ -14,6 +14,7 @@ export function workoutVolume(active) {
 export function findPRs(active, workouts) {
   const past = {}
   for (const w of workouts || []) {
+    if (!w) continue
     for (const e of w.entries || []) {
       const b = best1RM(e.sets)
       if (b > (past[e.exId] || 0)) past[e.exId] = b
@@ -44,7 +45,8 @@ export function finalizeWorkout(active, workouts) {
 /* 预填：找到最近一次做这个动作的组数安排，作为本组起点（openGym 的“重量自动带出”）。 */
 export function prefillFor(exId, workouts) {
   for (const w of workouts || []) {
-    const e = (w.entries || []).find(x => x.exId === exId)
+    if (!w) continue
+    const e = (w.entries || []).find(x => x?.exId === exId)
     if (e && (e.sets || []).length) return e.sets.slice(0, 8).map(s => ({ reps: s.reps, kg: s.kg, done: false }))
   }
   return [{ reps: 10, kg: 0, done: false }]

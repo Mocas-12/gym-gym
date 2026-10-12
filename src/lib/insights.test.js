@@ -65,3 +65,21 @@ describe('trainedExercises', () => {
     expect(trainedExercises(ws)).toEqual(['a', 'b'])
   })
 })
+
+describe('脏数据防御（真机曾出现 null 记录导致历史页崩溃）', () => {
+  it('workouts 里的 null / 缺 start 的记录全部被跳过', () => {
+    const ws = [
+      null,
+      mk(0, [{ exId: 'bench', m: '胸', sets: [{ kg: 60, reps: 8, done: true }] }]),
+      { id: 'bad' }, // 缺 start
+    ]
+    expect(() => {
+      e1rmSeries(ws, 'bench')
+      heatmap(ws, 30, NOW)
+      muscleLoad(ws, 7, NOW)
+      trainedExercises(ws)
+    }).not.toThrow()
+    expect(e1rmSeries(ws, 'bench')).toHaveLength(1)
+    expect(trainedExercises(ws)).toEqual(['bench'])
+  })
+})

@@ -208,13 +208,18 @@ export const useStore = create(
     }),
     {
       name: 'gym_gym_v1',
-      version: 2,
-      /* v1 → v2：补 plan 与 routine 的 cfg/supersets 字段，旧数据原样保留 */
+      version: 3,
+      /* v1→v2：补 plan 与 routine 的 cfg/supersets；v3：清洗脏数据——
+       * 真机上曾出现 workouts 数组混入 null 导致历史页崩溃（ErrorBoundary 兜住）。
+       * 迁移在每次版本升级时执行，把不合格的记录整个滤掉。 */
       migrate: (p, ver) => {
         if (ver < 2) {
           p.plan = p.plan || { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] }
           p.routines = (p.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r }))
         }
+        p.workouts = (Array.isArray(p.workouts) ? p.workouts : []).filter(w => w && typeof w === 'object' && Array.isArray(w.entries))
+        p.bodyweight = (Array.isArray(p.bodyweight) ? p.bodyweight : []).filter(e => e && typeof e === 'object')
+        p.customEx = (Array.isArray(p.customEx) ? p.customEx : []).filter(e => e && typeof e === 'object' && e.id)
         return p
       },
       partialize: s => ({

@@ -28,9 +28,12 @@ export default function HistoryView() {
   /* 每个动作的历史最佳（估计 1RM）——历史数据可能有脏值，逐条过滤 */
   const prs = useMemo(() => {
     const best = {}
-    for (const w of workouts) for (const e of w.entries || []) {
-      const b = best1RM(e.sets)
-      if (Number.isFinite(b) && b > (best[e.exId]?.e1rm || 0)) best[e.exId] = { exId: e.exId, name: e.name, e1rm: b }
+    for (const w of workouts) {
+      if (!w) continue
+      for (const e of w.entries || []) {
+        const b = best1RM(e.sets)
+        if (Number.isFinite(b) && b > (best[e.exId]?.e1rm || 0)) best[e.exId] = { exId: e.exId, name: e.name, e1rm: b }
+      }
     }
     return Object.values(best).sort((a, b) => b.e1rm - a.e1rm)
   }, [workouts])

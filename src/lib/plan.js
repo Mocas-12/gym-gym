@@ -13,6 +13,7 @@ export function rotationNext(rotation, workouts) {
   if (!rotation || !rotation.length) return null
   let lastIdx = -1
   for (const w of workouts || []) {
+    if (!w) continue
     const i = rotation.indexOf(w.rid)
     if (i >= 0) { lastIdx = i; break }
   }
