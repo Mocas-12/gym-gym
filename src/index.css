@@ -47,10 +47,16 @@ body {
 .tab {
   flex: 1; background: none; border: 0; color: var(--dim);
   font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 6px 0; cursor: pointer;
+  padding: 4px 0; cursor: pointer; transition: color 0.18s;
 }
-.tab-icon { font-size: 20px; line-height: 1; }
+.tab-icon {
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px 18px; border-radius: 99px;
+  transition: background 0.18s, transform 0.18s;
+}
 .tab.on { color: var(--accent); }
+.tab.on .tab-icon { background: rgba(163, 230, 53, 0.13); transform: translateY(-1px); }
+.tab:active .tab-icon { transform: scale(0.92); }
 
 /* ---- 文本 ---- */
 .h1 { font-size: 28px; font-weight: 800; margin: 8px 0 2px; letter-spacing: -0.5px; }
