@@ -99,7 +99,7 @@ export default function Home() {
           const v = parseFloat(new FormData(e.currentTarget).get('kg'))
           if (v > 20 && v < 300) { logBodyweight(v); toast('已记录体重') }
         }}>
-          <input name="kg" className="input" inputMode="decimal" placeholder={todayW ? '有变化就在下方更新…' : '输入今天体重 (kg)'} />
+          <input name="kg" className="input" inputMode="decimal" placeholder={todayW ? '有变化就在这里更新…' : '输入今天体重 (kg)'} />
           <button className="btn primary">记录</button>
         </form>
         {week.length > 1 && (
