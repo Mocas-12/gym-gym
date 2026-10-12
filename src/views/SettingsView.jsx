@@ -145,7 +145,7 @@ export default function SettingsView() {
 
       {/* 设备视口调试信息：排查真机「底栏不贴边」类问题的一手数据 */}
       <div className="page-foot dim small mono">
-        GymGym v0.6.1 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} · {vp.standalone ? '主屏幕' : '浏览器'}
+        GymGym v0.6.2 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} · {vp.standalone ? '主屏幕' : '浏览器'}
       </div>
     </div>
   )

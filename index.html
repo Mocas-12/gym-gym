@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-    <!-- iOS 主屏幕应用模式：全屏、无浏览器工具栏 -->
+    <!-- iOS 主屏幕应用模式：全屏、无浏览器工具栏。
+         状态栏用 default（不悬浮）：iOS 26 对 black-translucent 悬浮模式的独立 PWA
+         视口计算有 bug（innerHeight = 屏幕 − 状态栏高，底部留黑边）；default 模式
+         状态栏由系统排在顶部，页面从其下方铺到物理底边，底部必然贴合。 -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="GymGym" />
     <meta name="theme-color" content="#0c1015" />
     <link rel="manifest" href="./manifest.webmanifest" />
