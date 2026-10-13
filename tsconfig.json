@@ -10,6 +10,6 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/lib/**/*.js"],
+  "include": ["src/lib/**/*.js", "src/lib/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

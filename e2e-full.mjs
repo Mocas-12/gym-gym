@@ -69,7 +69,9 @@ async function fresh(seed) {
 /* ============ B. 训练页 ============ */
 {
   const p = await fresh({})
-  await p.click('.today-card, .start-card >> nth=0')
+  // 固定从「推日」开始（首动作=杠铃卧推，B5 依赖杠铃配重行）。
+  // 不能点 today-card：它随星期几变化（周三=拉日，首动作自重），曾造成 B5 日期相关假失败
+  await p.click('.start-card:has-text("推日")')
   await p.waitForTimeout(500)
   check('B1 训练页打开', await p.isVisible('.workout-head'))
   check('B2 预填组存在', (await p.locator('.set-row').count()) > 0)

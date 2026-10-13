@@ -1,4 +1,5 @@
 import React from 'react'
+import { reportErr } from '../lib/telemetry.js'
 
 /* 视图级兜底：任何页面崩溃不再白/黑屏，而是显示错误信息。
  * 手机上出问题时，屏幕上的这行错误文字就是排查线索——截图发出来即可定位。 */
@@ -11,6 +12,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error) {
     console.error('[GymGym] view crashed:', error)
+    reportErr(error, 'render') // 已连同步时自动上报到用户自己的后端（fire-and-forget）
   }
 
   render() {

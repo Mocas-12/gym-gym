@@ -126,7 +126,7 @@ export const reportError = (url, token, report) => {
 /**
  * SW/缓存状态自报（fire-and-forget）。
  * @param {string} url @param {string} token
- * @param {{ v: string, dev: string, swActive: boolean, cacheNames: string[], precache: string, precacheDetail?: any, ua: string }} report
+ * @param {{ v: string, dev: string, swActive: boolean, swV?: string, cacheNames: string[], precache: string, ua: string }} report
  * @returns {void}
  */
 export const reportSwStatus = (url, token, report) => {

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import { register, pullData, enablePush, testPush } from '../lib/sync.js'
+import { register, pullData, enablePush, testPush, fetchDiagnostics } from '../lib/sync.js'
+import { APP_VERSION } from '../lib/telemetry.js'
 
 /* 同步与推送卡片：连接微后端（注册或填令牌）→ 自动同步；推送订阅/测试。 */
 export default function SyncCard() {
@@ -14,6 +15,7 @@ export default function SyncCard() {
   const [token, setToken] = useState(sync.token)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [diag, setDiag] = useState(null)
 
   const connected = !!(sync.url && sync.token)
 
@@ -102,6 +104,18 @@ export default function SyncCard() {
     }
   }
 
+  /* 服务端视角的诊断：各设备自报的 SW/缓存状态 + 最近崩溃 */
+  const loadDiag = async () => {
+    setBusy(true)
+    try {
+      const r = await fetchDiagnostics(sync.url, sync.token)
+      if (r.ok) setDiag(r.data)
+      else toast('诊断读取失败：' + (r.data.error || r.status))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="card">
       <p className="dim small">
@@ -163,6 +177,43 @@ export default function SyncCard() {
               本地通知测试
             </button>
           </div>
+          <button className="btn ghost block sm" disabled={busy} onClick={loadDiag}>
+            诊断（各设备 SW 状态 / 最近崩溃）
+          </button>
+          {diag && (
+            <div
+              className="dim small mono"
+              style={{ marginTop: 8, maxHeight: 180, overflow: 'auto', textAlign: 'left' }}
+            >
+              <div>
+                本机 v{APP_VERSION} · 已上报设备 {diag.devices.length} · 服务端错误 {diag.errors.length} 条
+              </div>
+              {diag.devices.map(d => (
+                <div key={d.dev + d.t}>
+                  {d.dev?.slice(0, 6)} · v{d.v} · SW{d.swActive ? '✓' : '✗'}
+                  {d.swV ? `(${d.swV})` : ''} · 预缓存{d.precache} ·{' '}
+                  {new Date(d.t).toLocaleString('zh-CN', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+              ))}
+              {diag.errors.slice(0, 5).map((e, i) => (
+                <div key={i} title={e.stack || ''}>
+                  ✗{' '}
+                  {new Date(e.t).toLocaleString('zh-CN', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  v{e.v} {String(e.msg).slice(0, 90)}
+                </div>
+              ))}
+            </div>
+          )}
           <button
             className="btn ghost block sm"
             disabled={busy}

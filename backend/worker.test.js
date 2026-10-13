@@ -1,5 +1,6 @@
 /* 微后端全链路测试：从 docs/SYNC_PUSH.md 提取 Worker 代码（与部署同源），
- * KV 用内存垫片，在 Node 的 WebCrypto 里完整验证同步与推送加密（RFC 8291 逆向解密）。 */
+ * KV 用内存垫片，在 Node 的 WebCrypto 里完整验证同步、推送加密（RFC 8291 逆向解密）、
+ * 速率限制与诊断上报。 */
 import { describe, it, expect, beforeAll } from 'vitest'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
@@ -16,12 +17,11 @@ const b64u = u8 =>
 let api
 
 beforeAll(async () => {
-  const code = m[1]
-    .replace(/export async function/g, 'async function')
-    .replace('export default {', 'const handler = {')
+  // 代码块本身已是合法 ESM（export default handler），原样落盘即可导入
   const tmp = resolve(root, 'backend', '.worker-under-test.mjs')
-  writeFileSync(tmp, code + '\nexport { handler, encryptPush }')
+  writeFileSync(tmp, m[1])
   api = await import(pathToFileURL(tmp).href + '?t=' + Date.now())
+  api.handler = api.default?.fetch ? api.default : api.handler
   if (typeof api.handler?.fetch !== 'function') throw new Error('模块导出异常：' + Object.keys(api).join(','))
 })
 
@@ -40,12 +40,13 @@ const makeEnv = () => {
     },
   }
 }
-const req = (url, { method = 'GET', token = '', body, origin = 'https://mocas-12.github.io' } = {}) =>
+const req = (url, { method = 'GET', token = '', body, origin = 'https://mocas-12.github.io', ip } = {}) =>
   new Request(url, {
     method,
     headers: {
       'content-type': 'application/json',
       origin,
+      ...(ip ? { 'cf-connecting-ip': ip } : {}),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -168,5 +169,78 @@ describe('Web Push 加密（RFC 8291 往返）', () => {
     const body = await api.encryptPush('secret', b64u(clientPubRaw), b64u(auth))
     const other = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
     await expect(decryptPush(body, other.privateKey)).rejects.toThrow()
+  })
+})
+
+describe('诊断上报（错误 + SW 状态）', () => {
+  it('未认证一律 401', async () => {
+    expect((await call(ENV, req(BASE + '/api/error', { method: 'POST', body: { msg: 'x' } }))).status).toBe(
+      401
+    )
+    expect((await call(ENV, req(BASE + '/api/sw-report', { method: 'POST', body: {} }))).status).toBe(401)
+    expect((await call(ENV, req(BASE + '/api/diagnostics'))).status).toBe(401)
+  })
+  it('错误上报入库、超长截断、诊断可读回', async () => {
+    const long = 'x'.repeat(9999)
+    const r = await call(
+      ENV,
+      req(BASE + '/api/error', {
+        method: 'POST',
+        token: TOKEN,
+        body: { v: '1.1.0', msg: 'boom: ' + long, stack: long, url: 'https://x/gym-gym/', ua: 'iOS' },
+      })
+    )
+    expect(r.status).toBe(200)
+    const d = await call(ENV, req(BASE + '/api/diagnostics', { token: TOKEN }))
+    const { errors } = await d.json()
+    expect(errors).toHaveLength(1)
+    expect(errors[0].msg.startsWith('boom: ')).toBe(true)
+    expect(errors[0].msg.length).toBeLessThanOrEqual(500)
+    expect(errors[0].stack.length).toBeLessThanOrEqual(1500)
+  })
+  it('SW 状态自报：同设备只留最新一条', async () => {
+    const post = v =>
+      call(
+        ENV,
+        req(BASE + '/api/sw-report', {
+          method: 'POST',
+          token: TOKEN,
+          body: { v, dev: 'phoneA', swActive: true, cacheNames: ['gym-gym-v2'], precache: 'ok', ua: 'iOS' },
+        })
+      )
+    expect((await post('1.1.0')).status).toBe(200)
+    expect((await post('1.1.1')).status).toBe(200)
+    const d = await call(ENV, req(BASE + '/api/diagnostics', { token: TOKEN }))
+    const { devices } = await d.json()
+    expect(devices).toHaveLength(1)
+    expect(devices[0].v).toBe('1.1.1')
+    expect(devices[0].cacheNames).toEqual(['gym-gym-v2'])
+  })
+})
+
+describe('速率限制', () => {
+  it('注册超过 5 次/分钟后 429（按独立 IP 隔离）', async () => {
+    const ip = '203.0.113.' + Math.floor(Math.random() * 200) // 独立 IP，避免污染其他用例的桶
+    let last
+    for (let i = 0; i < 6; i++) {
+      last = await call(ENV, req(BASE + '/api/register', { method: 'POST', body: { name: 'rl' }, ip }))
+    }
+    expect(last.status).toBe(429)
+    const d = await last.json()
+    expect(d.retryAfter).toBeGreaterThan(0)
+    // 其他 IP 不受影响
+    const ok = await call(
+      ENV,
+      req(BASE + '/api/register', { method: 'POST', body: { name: 'rl2' }, ip: '198.51.100.7' })
+    )
+    expect(ok.status).toBe(200)
+  })
+  it('诊断组限流生效', async () => {
+    const ip = '192.0.2.' + Math.floor(Math.random() * 200)
+    let last
+    for (let i = 0; i < 21; i++) {
+      last = await call(ENV, req(BASE + '/api/diagnostics', { token: TOKEN, ip }))
+    }
+    expect(last.status).toBe(429)
   })
 })
