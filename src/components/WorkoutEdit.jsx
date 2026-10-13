@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import ExercisePicker from './ExercisePicker.jsx'
@@ -15,14 +15,36 @@ export default function WorkoutEdit({ workout, onClose }) {
   const updateWorkout = useStore(s => s.updateWorkout)
   const allEx = useStore(s => s.allEx)
   const toast = useUI(s => s.toast)
-  const [name, setName] = useState(workout?.name || '补记训练')
-  const [dateStr, setDateStr] = useState(dateStrOf(workout?.start || Date.now()))
+  /* 草稿：存 sessionStorage——中途切走菜单再回来，填了一半的内容自动恢复 */
+  const DKEY = 'gym_edit_draft_' + (workout?.id || 'new')
+  const draft = useMemo(() => {
+    try { return JSON.parse(sessionStorage.getItem(DKEY) || 'null') } catch { return null }
+  }, [DKEY])
+  const clearDraft = () => sessionStorage.removeItem(DKEY)
+
+  const [name, setName] = useState(draft?.name ?? workout?.name ?? '补记训练')
+  const [dateStr, setDateStr] = useState(draft?.dateStr ?? dateStrOf(workout?.start || Date.now()))
   const [entries, setEntries] = useState(() =>
-    (workout?.entries || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
+    draft?.entries ?? (workout?.entries || []).map(e => ({ ...e, sets: (e.sets || []).map(s => ({ ...s })) }))
   )
   const [picking, setPicking] = useState(false)
   const list = allEx()
   const nameOf = eid => list.find(e => e.id === eid)?.n || eid
+
+  /* 草稿：存 sessionStorage（切走菜单再回来不丢）；保存/取消时清除 */
+  const DKEY = 'gym_edit_draft_' + (workout?.id || 'new')
+  const clearDraft = () => sessionStorage.removeItem(DKEY)
+  useEffect(() => {
+    sessionStorage.setItem(DKEY, JSON.stringify({ name, dateStr, entries }))
+  }, [DKEY, name, dateStr, entries])
+  const restore = () => {
+    try {
+      const d = JSON.parse(sessionStorage.getItem(DKEY) || 'null')
+      if (!d || !Array.isArray(d.entries) || !d.entries.length) return false
+      setName(d.name); setDateStr(d.dateStr); setEntries(d.entries)
+      return true
+    } catch { return false }
+  }
 
   const patchEntry = (i, fn) => setEntries(prev => prev.map((e, k) => (k === i ? fn(e) : e)))
   const addSet = i => patchEntry(i, e => {
@@ -52,6 +74,7 @@ export default function WorkoutEdit({ workout, onClose }) {
     const doc = { ...(workout || {}), id: workout?.id || newId(), name: name.trim() || '训练', d: dateStr, start, end: start + dur, entries }
     const saved = workout ? updateWorkout(workout.id, doc) : addWorkout(doc)
     if (!saved) { toast('还没有完成的组，保存不了'); return }
+    clearDraft()
     toast(workout ? '已更新 · 统计已重算' : '已补记')
     onClose()
   }
@@ -110,7 +133,7 @@ export default function WorkoutEdit({ workout, onClose }) {
           <button className="btn ghost block" onClick={() => setPicking(true)}>＋ 添加动作</button>
           <div className="row">
             <button className="btn primary grow" onClick={save}>保存</button>
-            <button className="btn ghost" onClick={onClose}>取消</button>
+            <button className="btn ghost" onClick={() => { clearDraft(); onClose() }}>取消</button>
           </div>
         </div>
       </div>

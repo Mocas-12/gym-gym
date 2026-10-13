@@ -162,7 +162,15 @@ button.card { cursor: pointer; display: block; }
 .rest-btns { display: flex; gap: 6px; }
 
 /* ---- 抽屉 ---- */
-.sheet-mask { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.55); display: flex; align-items: flex-end; }
+/* 抽屉遮罩不再盖住底栏：编辑器打开时也能直接切换菜单（切换=放弃未保存的编辑） */
+.sheet-mask {
+  position: fixed; left: 0; right: 0; top: 0; bottom: calc(56px + var(--safe-b));
+  z-index: 60; background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: flex-end;
+}
+.sheet-mask.top { align-items: stretch; }
+.sheet-mask.top .sheet { max-height: 100%; border-radius: 22px; margin-top: calc(var(--safe-t) + 8px); }
+.sheet.tall { max-height: 100%; }
 .sheet {
   background: var(--bg); border-radius: 22px 22px 0 0; width: 100%; max-height: 82dvh;
   display: flex; flex-direction: column; padding-bottom: var(--safe-b);
@@ -292,8 +300,6 @@ button.card { cursor: pointer; display: block; }
 .rot-n { width: 22px; height: 22px; border-radius: 50%; background: var(--card-2); border: 1px solid var(--line); color: var(--dim); font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 /* 模板编辑器 */
-.sheet-mask.top { align-items: stretch; }
-.sheet.tall { max-height: 94dvh; }
 .edit-row { display: flex; align-items: flex-start; gap: 6px; padding: 10px 0; }
 .edit-row + .edit-row { border-top: 1px solid var(--line); }
 .cfg-row { display: flex; gap: 10px; margin-top: 10px; }
