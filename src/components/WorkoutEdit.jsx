@@ -31,20 +31,10 @@ export default function WorkoutEdit({ workout, onClose }) {
   const list = allEx()
   const nameOf = eid => list.find(e => e.id === eid)?.n || eid
 
-  /* 草稿：存 sessionStorage（切走菜单再回来不丢）；保存/取消时清除 */
-  const DKEY = 'gym_edit_draft_' + (workout?.id || 'new')
-  const clearDraft = () => sessionStorage.removeItem(DKEY)
+  /* 草稿持久化：填了一半的内容随改动写入 sessionStorage，切走菜单不丢 */
   useEffect(() => {
     sessionStorage.setItem(DKEY, JSON.stringify({ name, dateStr, entries }))
   }, [DKEY, name, dateStr, entries])
-  const restore = () => {
-    try {
-      const d = JSON.parse(sessionStorage.getItem(DKEY) || 'null')
-      if (!d || !Array.isArray(d.entries) || !d.entries.length) return false
-      setName(d.name); setDateStr(d.dateStr); setEntries(d.entries)
-      return true
-    } catch { return false }
-  }
 
   const patchEntry = (i, fn) => setEntries(prev => prev.map((e, k) => (k === i ? fn(e) : e)))
   const addSet = i => patchEntry(i, e => {
