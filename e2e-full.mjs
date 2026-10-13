@@ -1,9 +1,9 @@
 /* 全功能端到端矩阵：四大页面全部功能 + 脏数据健壮性 + 多机型。
  * 运行：npm run build && npm run preview & ；node e2e-full.mjs */
-import { chromium } from 'playwright'
+import { chromium, webkit } from 'playwright'
 
 const BASE = process.env.E2E_URL || 'http://localhost:8930'
-const browser = await chromium.launch({ executablePath: 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe' })
+const browser = await (process.env.E2E_BROWSER === 'webkit' ? webkit.launch() : chromium.launch({ executablePath: 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe' }))
 const results = []
 const check = (name, ok, detail = '') => { results.push([ok ? 'PASS' : 'FAIL', name, detail]); if (!ok && detail) results.push(['INFO', name + ' 详情', detail]) }
 const errors = []
@@ -164,6 +164,7 @@ function page2count(p, sel) { return p.locator(sel).first().textContent() }
   await p.locator('button:has-text("连接")').last().click(); await p.waitForTimeout(900)
   check('E6 假地址友好报错', (await p.locator('.toast').textContent().catch(() => '')).includes('无法连接'))
   await p.close()
+  errors.length = 0 // E6 故意连假地址的预期网络错误不计入后续健壮性检查
 }
 
 /* ============ F. 脏数据健壮性 ============ */

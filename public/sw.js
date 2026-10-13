@@ -2,12 +2,31 @@
  * 目的有二：让 Android/Chrome 满足可安装条件（触发原生安装框），以及离线打开。 */
 const CACHE = 'gym-gym-v2'
 
-self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('install', e => e.waitUntil((async () => {
+  console.log('[SW-INSTALL] 开始')
+  self.skipWaiting()
+  try {
+    // 预缓存清单由 scripts/inject-precache.mjs 构建后注入（含外壳与全部 hash 资产）
+    const list = typeof PRECACHE_LIST !== 'undefined' ? PRECACHE_LIST : ['./']
+    console.log('[SW-INSTALL] list =', JSON.stringify(list))
+    const c = await caches.open(CACHE)
+    const dbg = {}
+    await Promise.all(list.map(async u => {
+      try { const r = await fetch(u); dbg[u] = r.status; if (r.ok) await c.put(u, r); else dbg[u] += '/' + r.status }
+      catch (e) { dbg[u] = 'ERR ' + e.message }
+    }))
+    console.log('[SW-INSTALL] 结果', JSON.stringify(dbg))
+    await c.put('__install_debug__', new Response(JSON.stringify(dbg)))
+  } catch (e) {
+    console.log('[SW-INSTALL] 失败', e.message)
+    try { const c = await caches.open(CACHE); await c.put('__install_debug__', JSON.stringify({ fatal: e.message })) } catch {}
+  }
+})()))
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys()
     .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim())
-)
+))
 
 /* Web Push：app 在前台可见时静默（页内有声音/震动），否则弹系统通知（手表镜像） */
 self.addEventListener('push', e => {

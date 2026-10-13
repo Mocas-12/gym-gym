@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/inject-precache.mjs",
     "preview": "vite preview",
     "icons": "node scripts/gen-icons.mjs",
     "test": "vitest run",
