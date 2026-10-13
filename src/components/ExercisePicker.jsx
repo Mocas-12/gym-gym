@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { MUSCLES, EQUIPMENT } from '../data/exercises.js'
@@ -35,13 +36,15 @@ export default function ExercisePicker({ onAdd }) {
     setQ('')
   }
 
-  return (
+  // Portal 渲染到 body：嵌在编辑抽屉里时也不会被父层遮挡/裁剪
+  return createPortal(
     <div className="sheet-mask" onClick={() => onAdd(null, added)}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-head">
           <input
             className="input grow"
             placeholder="搜索练习，或输入新名字回车创建"
+            autoFocus
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && q.trim() && !shown.some(g => g.items.length)) addCustom() }}
@@ -71,6 +74,7 @@ export default function ExercisePicker({ onAdd }) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

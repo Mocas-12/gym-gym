@@ -20,14 +20,14 @@ export const DEFAULT_CFG = () => ({ scheme: 'double', inc: 2.5, reps: 8, min: 6,
 export const round05 = v => Math.round(v * 2) / 2
 export const deloadKg = (kg, pct = 0.1) => round05(kg * (1 - pct))
 
-/* 该动作最近 n 次训练的完成组（workouts 新的在前）。只看有重量的完成组。
- * 计时类（scheme=time）的组 reps 为 null，同样放行。 */
+/* 该动作最近 n 次训练的完成组（workouts 新的在前）。
+ * 力量：kg×reps 都要有；计时类（sec 字段）有秒即可。 */
 export function sessionsOf(workouts, exId, n = 2) {
   const out = []
   for (const w of workouts || []) {
     if (!w) continue
     const e = (w.entries || []).find(x => x?.exId === exId)
-    const sets = e ? (e.sets || []).filter(s => s.done && s.kg > 0 && (s.reps > 0 || s.reps == null)) : null
+    const sets = e ? (e.sets || []).filter(s => s.done && ((s.kg > 0 && (s.reps > 0 || s.reps == null)) || s.sec > 0)) : null
     if (sets && sets.length) { out.push(sets); if (out.length >= n) break }
   }
   return out
@@ -94,16 +94,17 @@ export function nextTarget(cfg, workouts, exId) {
   }
 
   if (cfg.scheme === 'time') {
-    // 计时递增（平板支撑等）：秒数存在 kg 字段。全部达标 → 目标时间 +incSec
+    // 计时递增（平板支撑等）：秒数存在 sec 字段（旧数据在 kg）。全部达标 → 目标时间 +incSec
     const target = cfg.targetSec || 45
     const incSec = cfg.incSec || 5
     const maxSec = cfg.maxSec || 120
-    if (last.every(s => s.kg >= target)) {
-      if (target >= maxSec) return { kg: target, reps: null, note: `已到上限 ${maxSec} 秒，保持` }
+    const secsOf = s => s.sec ?? s.kg ?? 0
+    if (last.every(s => secsOf(s) >= target)) {
+      if (target >= maxSec) return { kg: target, sec: target, reps: null, note: `已到上限 ${maxSec} 秒，保持` }
       const t = Math.min(maxSec, target + incSec)
-      return { kg: t, reps: null, note: `上次全部 ≥${target} 秒 → 目标加到 ${t} 秒` }
+      return { kg: t, sec: t, reps: null, note: `上次全部 ≥${target} 秒 → 目标加到 ${t} 秒` }
     }
-    return { kg: target, reps: null, note: `没做满 ${target} 秒 → 目标不变，先补齐` }
+    return { kg: target, sec: target, reps: null, note: `没做满 ${target} 秒 → 目标不变，先补齐` }
   }
 
   // double progression

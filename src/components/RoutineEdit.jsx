@@ -40,8 +40,9 @@ export default function RoutineEdit({ id, onClose }) {
   }
   const remove = i => { setExIds(exIds.filter((_, k) => k !== i)); setJoins(joins.filter((_, k) => k !== i)) }
   const onPick = ex => {
-    if (ex && !exIds.includes(ex.id)) { setExIds([...exIds, ex.id]); setJoins([...joins, false]) }
-    if (ex === null) setPicking(false)
+    if (!ex) { setPicking(false); return }
+    setExIds(prev => (prev.includes(ex.id) ? prev : [...prev, ex.id]))
+    setJoins(prev => (exIds.includes(ex.id) ? prev : [...prev, false]))
   }
   const save = () => {
     updateRoutine(id, { name: name.trim() || routine.name, exIds, supersets: groups.filter(g => g.length > 1), cfg })

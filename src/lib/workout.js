@@ -43,12 +43,15 @@ export function finalizeWorkout(active, workouts) {
   return { workout: doc, prs }
 }
 
-/* 预填：找到最近一次做这个动作的组数安排，作为本组起点（openGym 的“重量自动带出”）。 */
+/* 预填：找到最近一次做这个动作的组数安排，作为本组起点（openGym 的“重量自动带出”）。
+ * 完整复制组字段（有氧的分/速/坡、计时的秒、RIR），只重置完成与热身标记。 */
 export function prefillFor(exId, workouts) {
   for (const w of workouts || []) {
     if (!w) continue
     const e = (w.entries || []).find(x => x?.exId === exId)
-    if (e && (e.sets || []).length) return e.sets.slice(0, 8).map(s => ({ reps: s.reps, kg: s.kg, done: false }))
+    if (e && (e.sets || []).length) {
+      return e.sets.slice(0, 8).map(s => ({ ...s, done: false, w: undefined, rir: undefined }))
+    }
   }
   return [{ reps: 10, kg: 0, done: false }]
 }

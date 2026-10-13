@@ -4,3 +4,4 @@ dist/
 .DS_Store
 .mimosa/
 .wrangler/
+backend/.worker-under-test.mjs

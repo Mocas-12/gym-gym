@@ -112,7 +112,8 @@ const b64uToU8 = s => {
   }
   const out = new Uint8Array(Math.floor(clean.length * 3 / 4))
   let o = 0
-  for (let i = 0; i + 3 < clean.length + 1; i += 4) {
+  // 注意：末尾 quad 可能不足 4 个字符，靠 undefined-break 收尾（此前边界条件写错，曾丢失 auth 尾字节）
+  for (let i = 0; i < clean.length; i += 4) {
     const c0 = clean[i], c1 = clean[i + 1], c2 = clean[i + 2], c3 = clean[i + 3]
     if (c1 === undefined) break
     out[o++] = (c0 << 2) | (c1 >> 4)
@@ -306,6 +307,9 @@ export default {
         const body = await request.json()
         const state = body.state
         if (!state || typeof state !== 'object' || Array.isArray(state)) return answer(400, { error: 'state required' })
+        // 服务器侧净化（防线的最后一道）：历史页崩溃类脏数据不允许入库
+        state.workouts = (Array.isArray(state.workouts) ? state.workouts : []).filter(w => w && typeof w === 'object' && Array.isArray(w.entries))
+        state.bodyweight = (Array.isArray(state.bodyweight) ? state.bodyweight : []).filter(e => e && typeof e === 'object')
         const raw = await env.KV.get('state:' + uid)
         const cur = raw ? JSON.parse(raw) : null
         const rev = cur?._rev || 0

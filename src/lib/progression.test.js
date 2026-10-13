@@ -87,17 +87,21 @@ describe('三进程', () => {
 
 describe('计时递增', () => {
   const tm = { scheme: 'time', targetSec: 45, incSec: 5, maxSec: 120 }
-  it('全部达标 → 目标秒数增加（秒存 kg 字段）', () => {
-    const ws = [w('plank', [{ kg: 45 }, { kg: 45 }, { kg: 50 }])]
-    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ kg: 50, reps: null })
+  it('全部达标 → 目标秒数增加（秒存 sec 字段）', () => {
+    const ws = [w('plank', [{ sec: 45 }, { sec: 45 }, { sec: 50 }])]
+    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ sec: 50, reps: null })
   })
   it('没达标 → 目标不变', () => {
-    const ws = [w('plank', [{ kg: 40 }, { kg: 45 }])]
-    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ kg: 45 })
+    const ws = [w('plank', [{ sec: 40 }, { sec: 45 }])]
+    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ sec: 45 })
   })
   it('到上限后保持', () => {
-    const ws = [w('plank', [{ kg: 120 }, { kg: 130 }])]
+    const ws = [w('plank', [{ sec: 130 }, { sec: 125 }])]
     expect(nextTarget({ ...tm, targetSec: 120 }, ws, 'plank').note).toContain('上限')
+  })
+  it('旧数据（秒存在 kg 字段）同样识别', () => {
+    const ws = [w('plank', [{ kg: 45 }, { kg: 46 }])]
+    expect(nextTarget(tm, ws, 'plank')).toMatchObject({ kg: 50 })
   })
 })
 

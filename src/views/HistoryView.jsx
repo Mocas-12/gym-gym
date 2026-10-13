@@ -7,11 +7,24 @@ import { Heatmap, LineChart } from '../components/Charts.jsx'
 import BodyMap from '../components/BodyMap.jsx'
 import WorkoutEdit from '../components/WorkoutEdit.jsx'
 
+const fmtSet = (e, s) => {
+  if (e.type === 'cardio') {
+    const parts = [`${s.min ?? 0}分`]
+    if (s.speed) parts.push(`@${s.speed}km/h`)
+    if (s.incl) parts.push(`坡${s.incl}%`)
+    return (s.w ? '热' : '') + parts.join('')
+  }
+  if (e.type === 'time') return `${s.sec ?? s.kg ?? 0}秒`
+  return `${s.w ? '热' : ''}${s.kg ?? 0}×${s.reps}${s.rir != null ? ` R${s.rir}` : ''}`
+}
+
 const fmtDate = ts => new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 const fmtDur = ms => `${Math.round(ms / 60000)} 分钟`
 
 export default function HistoryView() {
   const { workouts, bodyweight, deleteWorkout, customEx, allEx, settings } = useStore()
+  // 渲染一律基于净化后的列表（防御兜底：store 已保证，这里双保险）
+  const list = useMemo(() => workouts.filter(w => w && typeof w === 'object' && Array.isArray(w.entries)), [workouts])
   const [openId, setOpenId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
   const [chartEx, setChartEx] = useState(null)
@@ -19,20 +32,20 @@ export default function HistoryView() {
   const [mapMode, setMapMode] = useState('vol')
 
   /* 洞察数据 */
-  const trained = useMemo(() => trainedExercises(workouts), [workouts])
+  const trained = useMemo(() => trainedExercises(list), [list])
   const nameById = useMemo(() => {
     const m = {}
     for (const e of allEx()) m[e.id] = e.n
     return m
   }, [customEx])
   const activeEx = chartEx || trained[0]
-  const series = useMemo(() => (activeEx ? e1rmSeries(workouts, activeEx) : []), [workouts, activeEx])
-  const grid = useMemo(() => heatmap(workouts), [workouts])
+  const series = useMemo(() => (activeEx ? e1rmSeries(list, activeEx) : []), [list, activeEx])
+  const grid = useMemo(() => heatmap(list), [list])
   const mapLevels = useMemo(() =>
-    mapMode === 'rec' ? recoveryLevels(workouts)
-      : mapMode === 'gap' ? neglectedLevels(workouts)
-        : volumeLevels(regionLoad(workouts, 7)),
-  [workouts, mapMode])
+    mapMode === 'rec' ? recoveryLevels(list)
+      : mapMode === 'gap' ? neglectedLevels(list)
+        : volumeLevels(regionLoad(list, 7)),
+  [list, mapMode])
   const MAP_HINT = { vol: '近 7 天训练量分布 · 越亮练得越多', rec: '恢复进度 · 越亮恢复越完整', gap: '越亮 = 越久没练' }
 
   /* 每个动作的历史最佳（估计 1RM）——历史数据可能有脏值，逐条过滤 */
@@ -48,8 +61,8 @@ export default function HistoryView() {
     return Object.values(best).sort((a, b) => b.e1rm - a.e1rm)
   }, [workouts])
 
-  const monthCount = workouts.filter(w => new Date(w.start).getMonth() === new Date().getMonth()).length
-  const monthVolume = workouts
+  const monthCount = list.filter(w => new Date(w.start).getMonth() === new Date().getMonth()).length
+  const monthVolume = list
     .filter(w => new Date(w.start).getMonth() === new Date().getMonth())
     .reduce((s, w) => s + (w.volume || 0), 0)
 
@@ -120,7 +133,7 @@ export default function HistoryView() {
         <button className="btn ghost sm" onClick={() => setEditing(null)}>＋ 补记一次</button>
       </div>
       {workouts.length === 0 && <p className="dim center">还没有训练记录，去首页开始第一次吧。</p>}
-      {workouts.map(w => (
+      {list.map(w => (
         <div key={w.id} className="card">
           <button className="row-between card-open" onClick={() => setOpenId(openId === w.id ? null : w.id)}>
             <div>
@@ -134,7 +147,7 @@ export default function HistoryView() {
               {(w.entries || []).map(e => (
                 <div key={e.exId} className="detail-ex">
                   <div className="card-title">{e.name}</div>
-                  <div className="mono dim small">{e.sets.map(s => `${s.w ? '热' : ''}${s.kg ?? 0}×${s.reps}${s.rir != null ? ` R${s.rir}` : ''}`).join('　')}</div>
+                  <div className="mono dim small">{e.sets.map(s => fmtSet(e, s)).join('　')}</div>
                 </div>
               ))}
               {confirmDel === w.id ? (

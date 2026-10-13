@@ -7,6 +7,7 @@ import { PRESET_ROUTINES } from '../data/routines.js'
 import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
 import { pullData, pushData } from '../lib/sync.js'
+import { normalizeState } from '../lib/normalize.js'
 
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
 const uid = () => [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 11)
@@ -161,6 +162,19 @@ export const useStore = create(
           },
         })
       },
+      /* 快捷方案：一次生成 N 组相同 kg×reps 的组（组内仍可单独修改） */
+      applyScheme(exId, n, reps, kg) {
+        const a = get().active
+        if (!a || !(n > 0)) return
+        set({
+          active: {
+            ...a,
+            entries: a.entries.map(e =>
+              e.exId !== exId ? e : { ...e, sets: Array.from({ length: n }, () => ({ kg, reps, done: false })) }
+            ),
+          },
+        })
+      },
 
       /* ---- 历史编辑/补记：改完的文档重算容量与 PR（withStats），并按时间排序 ---- */
       addWorkout(doc) {
@@ -183,13 +197,14 @@ export const useStore = create(
       setSync(patch) { set({ sync: { ...get().sync, ...patch } }) },
       adoptRemote(state, rev) {
         const cur = get()
+        const clean = normalizeState({ ...state })
         set({
           settings: { restSec: 90, sound: true, vibrate: true, showRir: true, ...state.settings },
-          customEx: Array.isArray(state.customEx) ? state.customEx : [],
-          routines: (Array.isArray(state.routines) ? state.routines : []).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
+          customEx: clean.customEx,
+          routines: (clean.routines || []).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
           plan: state.plan || cur.plan,
-          workouts: Array.isArray(state.workouts) ? state.workouts : [],
-          bodyweight: Array.isArray(state.bodyweight) ? state.bodyweight : [],
+          workouts: clean.workouts,
+          bodyweight: clean.bodyweight,
           sync: { ...cur.sync, rev, lastSync: Date.now() },
         })
       },
@@ -296,12 +311,15 @@ export const useStore = create(
           p.routines = (p.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r }))
         }
         if (ver < 4) p.sync = p.sync || { url: '', token: '', uid: '', rev: 0, lastSync: 0 }
-        p.workouts = (Array.isArray(p.workouts) ? p.workouts : []).filter(w => w && typeof w === 'object' && Array.isArray(w.entries))
-        p.bodyweight = (Array.isArray(p.bodyweight) ? p.bodyweight : []).filter(e => e && typeof e === 'object')
-        p.customEx = (Array.isArray(p.customEx) ? p.customEx : []).filter(e => e && typeof e === 'object' && e.id)
-        return p
+        return normalizeState(p)
       },
       onRehydrateStorage: () => state => {
+        // 每次启动都净化一遍（不只版本升级时）：脏数据最多活到下次启动，
+        // 内存态干净后下一次 persist 会把干净数据写回存储，实现存储自愈。
+        const cleaned = normalizeState(state || {})
+        if (state && (cleaned.workouts.length !== (state.workouts || []).length)) {
+          queueMicrotask(() => useStore.setState(cleaned))
+        }
         // 启动即同步一次：云端有更新就拉下来，本机有欠账就推上去
         lastChangeAt = 0
         if (state?.sync?.url && state?.sync?.token) state.syncNow?.()

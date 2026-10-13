@@ -119,14 +119,14 @@ export const EXERCISES = [
   E('bird-dog', '鸟狗式', '核心', '自重', 'reps', 45),
   E('ab-wheel', '健腹轮', '核心', '器械', 'reps', 60),
   E('cable-crunch', '绳索卷腹', '核心', '绳索', 'reps', 60),
-  /* ---- 有氧 ---- */
-  E('treadmill', '跑步机', '有氧', '器械', 'time', 0),
-  E('outdoor-run', '户外跑', '有氧', '自重', 'time', 0),
-  E('elliptical', '椭圆机', '有氧', '器械', 'time', 0),
-  E('row-erg', '划船机', '有氧', '器械', 'time', 0),
-  E('assault-bike', '风阻单车', '有氧', '器械', 'time', 0),
-  E('stair-climb', '登山机/爬楼', '有氧', '器械', 'time', 0),
-  E('jump-rope', '跳绳', '有氧', '自重', 'time', 0),
-  E('jumping-jack', '开合跳', '有氧', '自重', 'time', 0),
+  /* ---- 有氧：type cardio 记录 分钟 + 速度 + 坡度 ---- */
+  E('treadmill', '跑步机', '有氧', '器械', 'cardio', 0),
+  E('outdoor-run', '户外跑', '有氧', '自重', 'cardio', 0),
+  E('elliptical', '椭圆机', '有氧', '器械', 'cardio', 0),
+  E('row-erg', '划船机', '有氧', '器械', 'cardio', 0),
+  E('assault-bike', '风阻单车', '有氧', '器械', 'cardio', 0),
+  E('stair-climb', '登山机/爬楼', '有氧', '器械', 'cardio', 0),
+  E('jump-rope', '跳绳', '有氧', '自重', 'cardio', 0),
+  E('jumping-jack', '开合跳', '有氧', '自重', 'reps', 45),
   E('burpee', '波比跳', '有氧', '自重', 'reps', 60),
 ]

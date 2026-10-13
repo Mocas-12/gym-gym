@@ -60,6 +60,15 @@ export default function SyncCard() {
     toast(r.ok ? `测试已发出（${r.data.sent}/${r.data.total}）` : '发送失败')
   }
 
+  /* 差分诊断：直接经 SW 发本地通知。能看到 = 显示正常，问题在推送送达；看不到 = 通知权限/样式问题 */
+  const doLocal = async () => {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      await reg.showNotification('GymGym · 本地通知测试', { body: '看到这条 = 通知显示正常，问题只在推送送达环节' })
+      toast('本地通知已发出，看锁屏/横幅')
+    } catch (e) { toast('本地通知失败：' + e.message) }
+  }
+
   return (
     <div className="card">
       <p className="dim small">可选功能：连上你自己的微后端后，训练数据多设备同步，休息计时结束会推送提醒到手机和手表。部署方法见仓库 docs/SYNC_PUSH.md。</p>
@@ -85,7 +94,10 @@ export default function SyncCard() {
           <div className="row">
             <button className="btn primary grow" disabled={busy} onClick={doSync}>立即同步</button>
             <button className="btn ghost" disabled={busy} onClick={doPush}>开启推送</button>
-            <button className="btn ghost" disabled={busy} onClick={doTest}>测试</button>
+          </div>
+          <div className="row">
+            <button className="btn ghost grow" disabled={busy} onClick={doTest}>推送测试（远端）</button>
+            <button className="btn ghost grow" disabled={busy} onClick={doLocal}>本地通知测试</button>
           </div>
           <button className="btn ghost block sm" disabled={busy} onClick={() => { setSync({ url: '', token: '', uid: '', rev: 0, lastSync: 0 }); setUrl(''); setToken(''); toast('已断开（本机数据保留）') }}>断开连接</button>
         </>

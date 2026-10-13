@@ -4,6 +4,7 @@ import { useUI } from '../store/useUI.js'
 import RestTimer from '../components/RestTimer.jsx'
 import ExercisePicker from '../components/ExercisePicker.jsx'
 import SetRow from '../components/SetRow.jsx'
+import SchemeRow from '../components/SchemeRow.jsx'
 import { platesFor, fmtPlates, STANDARD_PLATES } from '../lib/plates.js'
 
 const fmtElapsed = ms => {
@@ -14,7 +15,7 @@ const REST_OPTS = [45, 60, 90, 120, 150, 180]
 
 export default function WorkoutView() {
   const { active, settings } = useStore()
-  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, toggleWarmup, finishWorkout, discardWorkout, setEntryRest } = useStore()
+  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, toggleWarmup, applyScheme, finishWorkout, discardWorkout, setEntryRest } = useStore()
   const { startRest, toast } = useUI()
   const [now, setNow] = useState(Date.now())
   const [picking, setPicking] = useState(false)
@@ -111,6 +112,9 @@ export default function WorkoutView() {
             </div>
             {en.note && <div className="target-note">{en.note}</div>}
             {plateLine(en) && <div className="plate-line mono">{plateLine(en)}</div>}
+            {en.type !== 'cardio' && en.type !== 'time' && (
+              <SchemeRow onApply={(n, reps, kg) => applyScheme(en.exId, n, reps, kg)} />
+            )}
             {restPickFor === en.exId && (
               <div className="rest-picker">
                 {REST_OPTS.map(s => (
