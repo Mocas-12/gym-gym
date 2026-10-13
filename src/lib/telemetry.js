@@ -53,7 +53,7 @@ export function reportErr(err, kind) {
     v: APP_VERSION,
     msg: kind + ': ' + raw,
     stack:
-      typeof /** @type {any} */ (err)?.stack === 'string'
+      typeof (/** @type {any} */ (err)?.stack) === 'string'
         ? /** @type {any} */ (err).stack.slice(0, 1500)
         : undefined,
     url: location.href.slice(0, 200),
