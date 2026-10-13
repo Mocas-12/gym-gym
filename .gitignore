@@ -6,3 +6,5 @@ dist/
 .wrangler/
 backend/.worker-under-test.mjs
 coverage/
+
+.lighthouseci

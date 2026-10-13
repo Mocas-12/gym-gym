@@ -19,3 +19,16 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run build
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # 阈值见 lighthouserc.json（perf/a11y/bp/seo 四类）；runner 自带 Chrome
+      - run: npx lhci autorun
