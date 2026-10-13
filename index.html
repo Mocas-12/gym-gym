@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- iOS 主屏幕应用模式：全屏、无浏览器工具栏。
+         状态栏用 default（不悬浮）：iOS 26 对 black-translucent 悬浮模式的独立 PWA
+         视口计算有 bug（innerHeight = 屏幕 − 状态栏高，底部留黑边）；default 模式
+         状态栏由系统排在顶部，页面从其下方铺到物理底边，底部必然贴合。 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="GymGym" />
+    <!-- CSP：全部资源同源自给（脚本/样式/字体/图标），连接仅限自身与用户自配的 Worker 后端 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; base-uri 'self'; form-action 'self'"
+    />
+    <meta name="theme-color" content="#0c1015" />
+    <meta
+      name="description"
+      content="GymGym · 纯本地健身记录 PWA：训练模板、渐进加重、休息计时、肌肉地图。数据只存在你自己的设备，可选同步到你自己的云。"
+    />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+    <title>GymGym · 健身记录</title>
+    <script type="module" crossorigin src="./assets/index-UzynJtJW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CIftiUHB.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
