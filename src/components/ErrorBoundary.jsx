@@ -23,19 +23,25 @@ export default class ErrorBoundary extends React.Component {
           <p className="dim small mono err-text">{msg}</p>
           <div className="row">
             <button className="btn primary" onClick={() => this.setState({ error: null })}>重试</button>
-            <button
-              className="btn ghost"
-              onClick={() => {
-                if (confirm('清空本机全部数据并重启？不可恢复，建议先截图这行错误反馈。')) {
-                  localStorage.clear()
-                  location.reload()
-                }
-              }}
-            >清空数据重启</button>
+            <button className="btn ghost" onClick={this.exportRaw}>导出数据备份</button>
           </div>
+          <p className="dim small" style={{ marginTop: 10, maxWidth: 320, textAlign: 'center' }}>
+            你的数据都还在，没有丢失。截图这行错误反馈给开发者即可定位修复。
+          </p>
         </div>
       )
     }
     return this.props.children
+  }
+
+  /* 崩溃时把原始存储导出成文件：数据可抢救，绝不在这里销毁任何东西 */
+  exportRaw = () => {
+    const raw = localStorage.getItem('gym_gym_v1') || '{}'
+    const blob = new Blob([raw], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `gym-gym-crash-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
 }

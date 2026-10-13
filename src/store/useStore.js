@@ -9,6 +9,22 @@ import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
 import { pullData, pushData } from '../lib/sync.js'
 import { normalizeState } from '../lib/normalize.js'
 
+/* 启动自愈（第一优先）：store 初始化之前就把持久层里的脏数据洗掉。
+ * 此前只清洗内存态、写回比较时机有 bug，导致脏数据长期滞留在存储里反复引发崩溃。 */
+try {
+  const raw = localStorage.getItem('gym_gym_v1')
+  if (raw) {
+    const doc = JSON.parse(raw)
+    if (doc && doc.state) {
+      const before = Array.isArray(doc.state.workouts) ? doc.state.workouts.length : -1
+      normalizeState(doc.state)
+      if (Array.isArray(doc.state.workouts) && doc.state.workouts.length !== before) {
+        localStorage.setItem('gym_gym_v1', JSON.stringify(doc))
+      }
+    }
+  }
+} catch { /* 存储不可读时让 zustand 走默认初始化 */ }
+
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
 const uid = () => [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 11)
 const today = () => new Date().toISOString().slice(0, 10)
@@ -314,13 +330,8 @@ export const useStore = create(
         return normalizeState(p)
       },
       onRehydrateStorage: () => state => {
-        // 每次启动都净化一遍（不只版本升级时）：脏数据最多活到下次启动，
-        // 内存态干净后下一次 persist 会把干净数据写回存储，实现存储自愈。
-        const cleaned = normalizeState(state || {})
-        if (state && (cleaned.workouts.length !== (state.workouts || []).length)) {
-          queueMicrotask(() => useStore.setState(cleaned))
-        }
-        // 启动即同步一次：云端有更新就拉下来，本机有欠账就推上去
+        // 就地净化 rehydrate 后的状态：渲染前生效，下一次 persist 写回干净副本
+        if (state) normalizeState(state)
         lastChangeAt = 0
         if (state?.sync?.url && state?.sync?.token) state.syncNow?.()
       },
