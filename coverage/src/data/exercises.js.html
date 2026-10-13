@@ -1,0 +1,481 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/data/exercises.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/data</a> exercises.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>5/5</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>1/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>1/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>4/4</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">115x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/* 内置练习库 v2：115 个动作，按肌群 × 器械系统性覆盖，全部自建无授权素材。
+ * id / n 名称 / m 肌群 / eq 器械 / type reps|time / rest 默认休息秒 */
+const E = (id, n, m, eq, type = 'reps', rest) =&gt; ({ id, n, m, eq, type, rest })
+&nbsp;
+export const MUSCLES = ['胸', '背', '肩', '手臂', '腿', '臀', '核心', '有氧']
+export const EQUIPMENT = ['杠铃', '哑铃', '器械', '绳索', '自重']
+&nbsp;
+export const EXERCISES = [
+  /* ---- 胸 ---- */
+  E('bench', '杠铃卧推', '胸', '杠铃', 'reps', 120),
+  E('incline-bb', '上斜杠铃卧推', '胸', '杠铃', 'reps', 105),
+  E('decline-bb', '下斜杠铃卧推', '胸', '杠铃', 'reps', 105),
+  E('smith-bench', '史密斯卧推', '胸', '器械', 'reps', 105),
+  E('incline-db', '上斜哑铃卧推', '胸', '哑铃', 'reps', 105),
+  E('db-bench', '平板哑铃卧推', '胸', '哑铃', 'reps', 90),
+  E('db-floor', '哑铃地板卧推', '胸', '哑铃', 'reps', 90),
+  E('db-fly', '哑铃飞鸟', '胸', '哑铃', 'reps', 75),
+  E('incline-fly', '上斜哑铃飞鸟', '胸', '哑铃', 'reps', 75),
+  E('cable-fly', '绳索夹胸', '胸', '绳索', 'reps', 75),
+  E('low-fly', '低位绳索夹胸', '胸', '绳索', 'reps', 75),
+  E('pec-deck', '蝴蝶机夹胸', '胸', '器械', 'reps', 75),
+  E('dips', '双杠臂屈伸', '胸', '自重', 'reps', 90),
+  E('pushup', '俯卧撑', '胸', '自重', 'reps', 60),
+  E('wide-pushup', '宽距俯卧撑', '胸', '自重', 'reps', 60),
+  E('deficit-pushup', '下斜俯卧撑（脚垫高）', '胸', '自重', 'reps', 60),
+  /* ---- 背 ---- */
+  E('pullup', '引体向上', '背', '自重', 'reps', 120),
+  E('chinup', '反手引体向上', '背', '自重', 'reps', 120),
+  E('inv-row', '澳式划船（低杠划船）', '背', '自重', 'reps', 90),
+  E('lat-pulldown', '高位下拉', '背', '器械', 'reps', 90),
+  E('close-pulldown', '窄距高位下拉', '背', '器械', 'reps', 90),
+  E('rev-pulldown', '反手高位下拉', '背', '器械', 'reps', 90),
+  E('barbell-row', '杠铃划船', '背', '杠铃', 'reps', 120),
+  E('t-row', 'T杠划船', '背', '杠铃', 'reps', 105),
+  E('pendlay', 'Pendlay 划船', '背', '杠铃', 'reps', 120),
+  E('db-row', '单臂哑铃划船', '背', '哑铃', 'reps', 75),
+  E('db-row-both', '俯身哑铃划船（双臂）', '背', '哑铃', 'reps', 90),
+  E('chest-sup-row', '上斜凳俯卧划船', '背', '哑铃', 'reps', 75),
+  E('seated-row', '坐姿划船', '背', '器械', 'reps', 90),
+  E('cable-row-1', '单臂绳索划船', '背', '绳索', 'reps', 75),
+  E('straight-arm-pulldown', '直臂下压', '背', '绳索', 'reps', 60),
+  E('back-ext', '山羊挺身', '背', '自重', 'reps', 75),
+  E('deadlift', '硬拉', '背', '杠铃', 'reps', 180),
+  /* ---- 肩 ---- */
+  E('ohp', '站姿杠铃推举', '肩', '杠铃', 'reps', 120),
+  E('behind-neck', '颈后杠铃推举', '肩', '杠铃', 'reps', 105),
+  E('db-shoulder-press', '坐姿哑铃推肩', '肩', '哑铃', 'reps', 90),
+  E('arnold', '阿诺德推举', '肩', '哑铃', 'reps', 90),
+  E('smith-press', '史密斯推肩', '肩', '器械', 'reps', 105),
+  E('lateral-raise', '哑铃侧平举', '肩', '哑铃', 'reps', 60),
+  E('cable-lateral', '绳索侧平举', '肩', '绳索', 'reps', 60),
+  E('front-raise', '哑铃前平举', '肩', '哑铃', 'reps', 60),
+  E('plate-front', '杠铃片前平举', '肩', '器械', 'reps', 60),
+  E('rear-delt-fly', '反向飞鸟（俯身哑铃）', '肩', '哑铃', 'reps', 60),
+  E('rev-pec-deck', '蝴蝶机反向飞鸟', '肩', '器械', 'reps', 60),
+  E('face-pull', '面拉', '肩', '绳索', 'reps', 60),
+  E('upright-row', '直立划船', '肩', '杠铃', 'reps', 75),
+  E('bb-shrug', '杠铃耸肩', '肩', '杠铃', 'reps', 60),
+  E('db-shrug', '哑铃耸肩', '肩', '哑铃', 'reps', 60),
+  /* ---- 手臂 ---- */
+  E('barbell-curl', '杠铃弯举', '手臂', '杠铃', 'reps', 75),
+  E('ez-curl', 'EZ 杠弯举', '手臂', '杠铃', 'reps', 75),
+  E('db-curl', '哑铃交替弯举', '手臂', '哑铃', 'reps', 60),
+  E('hammer-curl', '锤式弯举', '手臂', '哑铃', 'reps', 60),
+  E('incline-curl', '上斜哑铃弯举', '手臂', '哑铃', 'reps', 60),
+  E('conc-curl', '集中弯举', '手臂', '哑铃', 'reps', 60),
+  E('preacher-curl', '牧师凳弯举', '手臂', '器械', 'reps', 60),
+  E('cable-curl', '绳索弯举', '手臂', '绳索', 'reps', 60),
+  E('hammer-rope', '绳索锤式弯举', '手臂', '绳索', 'reps', 60),
+  E('triceps-pushdown', '绳索下压', '手臂', '绳索', 'reps', 60),
+  E('rev-pushdown', '反手绳索下压', '手臂', '绳索', 'reps', 60),
+  E('ohc-ext', '绳索过顶臂屈伸', '手臂', '绳索', 'reps', 60),
+  E('skull-crusher', '仰卧臂屈伸', '手臂', '杠铃', 'reps', 75),
+  E('close-grip-bench', '窄距卧推', '手臂', '杠铃', 'reps', 105),
+  E('db-oh-ext', '哑铃过顶臂屈伸', '手臂', '哑铃', 'reps', 60),
+  E('kickback', '俯身臂屈伸（踢腿式）', '手臂', '哑铃', 'reps', 60),
+  E('bench-dip', '凳上臂屈伸', '手臂', '自重', 'reps', 60),
+  E('diamond-pushup', '钻石俯卧撑', '手臂', '自重', 'reps', 60),
+  /* ---- 腿 ---- */
+  E('squat', '深蹲', '腿', '杠铃', 'reps', 150),
+  E('front-squat', '前蹲', '腿', '杠铃', 'reps', 135),
+  E('box-squat', '箱式深蹲', '腿', '杠铃', 'reps', 135),
+  E('smith-squat', '史密斯深蹲', '腿', '器械', 'reps', 120),
+  E('bulgarian', '保加利亚分腿蹲', '腿', '哑铃', 'reps', 105),
+  E('split-squat', '静态分腿蹲', '腿', '自重', 'reps', 90),
+  E('leg-press', '腿举', '腿', '器械', 'reps', 105),
+  E('hack-squat', '哈克深蹲', '腿', '器械', 'reps', 120),
+  E('lunge', '箭步蹲', '腿', '哑铃', 'reps', 90),
+  E('walking-lunge', '行走箭步蹲', '腿', '自重', 'reps', 90),
+  E('step-up', '凳上台阶', '腿', '哑铃', 'reps', 75),
+  E('sumo-dl', '相扑硬拉', '腿', '杠铃', 'reps', 150),
+  E('rdl', '罗马尼亚硬拉', '腿', '杠铃', 'reps', 120),
+  E('db-rdl', '哑铃罗马尼亚硬拉', '腿', '哑铃', 'reps', 90),
+  E('leg-curl', '腿弯举', '腿', '器械', 'reps', 75),
+  E('nordic', '北欧挺', '腿', '自重', 'reps', 90),
+  E('leg-ext', '腿屈伸', '腿', '器械', 'reps', 75),
+  E('standing-calf', '站姿提踵', '腿', '器械', 'reps', 45),
+  E('calf-raise-bw', '自重提踵', '腿', '自重', 'reps', 45),
+  E('seated-calf', '坐姿提踵', '腿', '器械', 'reps', 45),
+  /* ---- 臀 ---- */
+  E('hip-thrust', '臀推', '臀', '杠铃', 'reps', 105),
+  E('glute-bridge', '臀桥', '臀', '自重', 'reps', 45),
+  E('1leg-thrust', '单腿臀推', '臀', '自重', 'reps', 60),
+  E('cable-kick', '绳索后踢腿', '臀', '绳索', 'reps', 60),
+  E('donkey-kick', '跪姿后踢腿', '臀', '自重', 'reps', 45),
+  E('clamshell', '蚌式开合', '臀', '自重', 'reps', 45),
+  E('lat-walk', '弹力带侧向走', '臀', '自重', 'reps', 45),
+  E('1leg-dl', '单腿硬拉', '臀', '哑铃', 'reps', 60),
+  /* ---- 核心 ---- */
+  E('plank', '平板支撑', '核心', '自重', 'time', 45),
+  E('side-plank', '侧平板支撑', '核心', '自重', 'time', 45),
+  E('hollow', '团身支撑（Hollow）', '核心', '自重', 'time', 45),
+  E('crunch', '卷腹', '核心', '自重', 'reps', 45),
+  E('hanging-leg-raise', '悬垂举腿', '核心', '自重', 'reps', 60),
+  E('knee-raise', '悬垂屈膝举腿', '核心', '自重', 'reps', 60),
+  E('russian-twist', '俄罗斯转体', '核心', '自重', 'reps', 45),
+  E('v-up', 'V 字两头起', '核心', '自重', 'reps', 45),
+  E('dead-bug', '死虫式', '核心', '自重', 'reps', 45),
+  E('bird-dog', '鸟狗式', '核心', '自重', 'reps', 45),
+  E('ab-wheel', '健腹轮', '核心', '器械', 'reps', 60),
+  E('cable-crunch', '绳索卷腹', '核心', '绳索', 'reps', 60),
+  /* ---- 有氧：type cardio 记录 分钟 + 速度 + 坡度 ---- */
+  E('treadmill', '跑步机', '有氧', '器械', 'cardio', 0),
+  E('outdoor-run', '户外跑', '有氧', '自重', 'cardio', 0),
+  E('elliptical', '椭圆机', '有氧', '器械', 'cardio', 0),
+  E('row-erg', '划船机', '有氧', '器械', 'cardio', 0),
+  E('assault-bike', '风阻单车', '有氧', '器械', 'cardio', 0),
+  E('stair-climb', '登山机/爬楼', '有氧', '器械', 'cardio', 0),
+  E('jump-rope', '跳绳', '有氧', '自重', 'cardio', 0),
+  E('jumping-jack', '开合跳', '有氧', '自重', 'reps', 45),
+  E('burpee', '波比跳', '有氧', '自重', 'reps', 60),
+]
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-13T14:55:19.743Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

@@ -293,13 +293,14 @@ export const useStore = create(
       importState(json) {
         const d = JSON.parse(json)
         if (d.app !== 'gym-gym') throw new Error('不是 gym-gym 的备份文件')
+        const clean = normalizeState(d)
         set({
           settings: { ...get().settings, ...d.settings },
-          customEx: Array.isArray(d.customEx) ? d.customEx : [],
-          routines: (Array.isArray(d.routines) ? d.routines : PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
+          customEx: clean.customEx,
+          routines: (clean.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
           plan: d.plan || { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
-          workouts: Array.isArray(d.workouts) ? d.workouts : [],
-          bodyweight: Array.isArray(d.bodyweight) ? d.bodyweight : [],
+          workouts: clean.workouts,
+          bodyweight: clean.bodyweight,
           active: d.active || null,
         })
       },
