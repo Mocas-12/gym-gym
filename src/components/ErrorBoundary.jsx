@@ -22,8 +22,12 @@ export default class ErrorBoundary extends React.Component {
           <p className="small">这个页面出错了，其他页面不受影响</p>
           <p className="dim small mono err-text">{msg}</p>
           <div className="row">
-            <button className="btn primary" onClick={() => this.setState({ error: null })}>重试</button>
-            <button className="btn ghost" onClick={this.exportRaw}>导出数据备份</button>
+            <button className="btn primary" onClick={() => this.setState({ error: null })}>
+              重试
+            </button>
+            <button className="btn ghost" onClick={this.exportRaw}>
+              导出数据备份
+            </button>
           </div>
           <p className="dim small" style={{ marginTop: 10, maxWidth: 320, textAlign: 'center' }}>
             你的数据都还在，没有丢失。截图这行错误反馈给开发者即可定位修复。

@@ -3,20 +3,39 @@
 import { chromium, webkit } from 'playwright'
 
 const BASE = process.env.E2E_URL || 'http://localhost:8930'
-const browser = await (process.env.E2E_BROWSER === 'webkit' ? webkit.launch() : chromium.launch({ executablePath: 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe' }))
+const browser = await (process.env.E2E_BROWSER === 'webkit'
+  ? webkit.launch()
+  : chromium.launch({
+      executablePath: 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe',
+    }))
 const results = []
-const check = (name, ok, detail = '') => { results.push([ok ? 'PASS' : 'FAIL', name, detail]); if (!ok && detail) results.push(['INFO', name + ' 详情', detail]) }
+const check = (name, ok, detail = '') => {
+  results.push([ok ? 'PASS' : 'FAIL', name, detail])
+  if (!ok && detail) results.push(['INFO', name + ' 详情', detail])
+}
 const errors = []
 
 async function fresh(seed) {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
   page.on('pageerror', e => errors.push('[pageerror] ' + e.message))
-  page.on('console', m => { if (m.type() === 'error') errors.push('[console] ' + m.text()) })
+  page.on('console', m => {
+    if (m.type() === 'error') errors.push('[console] ' + m.text())
+  })
   page.on('dialog', d => d.accept())
   await page.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
   if (seed) {
     await page.evaluate(s => {
-      localStorage.setItem('gym_gym_v1', JSON.stringify({ state: { settings: { restSec: 90, sound: true, vibrate: true, showRir: true }, ...s }, version: 9 }))
+      localStorage.setItem(
+        'gym_gym_v1',
+        JSON.stringify({
+          state: { settings: { restSec: 90, sound: true, vibrate: true, showRir: true }, ...s },
+          version: 9,
+        })
+      )
     }, seed)
     await page.reload({ waitUntil: 'networkidle' })
   }
@@ -30,10 +49,18 @@ async function fresh(seed) {
   check('A1 首页渲染', (await p.textContent('h1')) === 'GymGym')
   check('A2 模板卡片 4+自由', (await p.locator('.start-card').count()) === 5)
   // 体重记录
-  await p.fill('.card:has(.section-title) input, form input', '72.5'); await p.click('button:has-text("记录")'); await p.waitForTimeout(600)
+  await p.fill('.card:has(.section-title) input, form input', '72.5')
+  await p.click('button:has-text("记录")')
+  await p.waitForTimeout(600)
   check('A3 体重记录显示', (await p.textContent('.big-num')).includes('72.5'))
-  await p.fill('input[placeholder*="这里更新"]', '71.8'); await p.click('button:has-text("记录")'); await p.waitForTimeout(600)
-  check('A4 体重更新+曲线', (await p.locator('.spark').count()) === 1, '曲线数 ' + (await p.locator('.spark').count()))
+  await p.fill('input[placeholder*="这里更新"]', '71.8')
+  await p.click('button:has-text("记录")')
+  await p.waitForTimeout(600)
+  check(
+    'A4 体重更新+曲线',
+    (await p.locator('.spark').count()) === 1,
+    '曲线数 ' + (await p.locator('.spark').count())
+  )
   // 今日安排（周一=推日）
   check('A5 今日安排卡', (await p.locator('.today-card, .rest-card').count()) === 1)
   await p.close()
@@ -42,7 +69,8 @@ async function fresh(seed) {
 /* ============ B. 训练页 ============ */
 {
   const p = await fresh({})
-  await p.click('.today-card, .start-card >> nth=0'); await p.waitForTimeout(500)
+  await p.click('.today-card, .start-card >> nth=0')
+  await p.waitForTimeout(500)
   check('B1 训练页打开', await p.isVisible('.workout-head'))
   check('B2 预填组存在', (await p.locator('.set-row').count()) > 0)
   // 快捷方案 4×12@12
@@ -50,42 +78,60 @@ async function fresh(seed) {
   await entry.locator('.scheme-in').nth(0).fill('4')
   await entry.locator('.scheme-in').nth(1).fill('12')
   await entry.locator('.scheme-in').nth(2).fill('12')
-  await entry.locator('button:has-text("生成")').click(); await p.waitForTimeout(200)
+  await entry.locator('button:has-text("生成")').click()
+  await p.waitForTimeout(200)
   check('B3 快捷方案生成 4 组', (await entry.locator('.set-row').count()) === 4)
   check('B4 组内 kg=12', (await entry.locator('.set-input').first().inputValue()) === '12')
   // 杠铃配重行（卧推 最后一组 72.5）
   const lastKg = entry.locator('.set-input').nth(6)
-  await lastKg.fill('72.5'); await p.waitForTimeout(400)
-  const plate = await entry.locator('.plate-line').textContent().catch(() => '(无)')
+  await lastKg.fill('72.5')
+  await p.waitForTimeout(400)
+  const plate = await entry
+    .locator('.plate-line')
+    .textContent()
+    .catch(() => '(无)')
   check('B5 配重行', plate.includes('每边') && plate.includes('25'), plate)
   // 勾选完成 → RIR
-  await entry.locator('.done-btn').first().click(); await p.waitForTimeout(200)
+  await entry.locator('.done-btn').first().click()
+  await p.waitForTimeout(200)
   check('B6 RIR 芯片出现', (await entry.locator('.rir-chip').count()) === 1)
-  await entry.locator('.rir-chip').first().click(); await p.waitForTimeout(100)
+  await entry.locator('.rir-chip').first().click()
+  await p.waitForTimeout(100)
   check('B7 RIR 点按循环', (await entry.locator('.rir-chip').first().textContent()).includes('R4'))
   // 热身组（点组号）
-  await entry.locator('.set-n-btn').first().click(); await p.waitForTimeout(100)
+  await entry.locator('.set-n-btn').first().click()
+  await p.waitForTimeout(100)
   check('B8 热身组标记', (await entry.locator('.set-n-btn.warm').count()) === 1)
   // 休息条 + 加 30s
   check('B9 休息条出现', await p.isVisible('.restbar'))
   const before = await p.textContent('.rest-num')
-  await p.click('text=+30s'); await p.waitForTimeout(2500)
+  await p.click('text=+30s')
+  await p.waitForTimeout(2500)
   check('B10 +30s 生效', (await p.textContent('.rest-num')) !== before)
   // 有氧：添加跑步机
-  await p.click('text=＋ 添加动作'); await p.waitForTimeout(400)
-  await p.fill('.sheet-head input', '跑步机'); await p.waitForTimeout(300)
-  await p.click('.pick:has-text("跑步机")'); await p.waitForTimeout(150)
-  await p.click('.sheet-head .btn.primary'); await p.waitForTimeout(300)
+  await p.click('text=＋ 添加动作')
+  await p.waitForTimeout(400)
+  await p.fill('.sheet-head input', '跑步机')
+  await p.waitForTimeout(300)
+  await p.click('.pick:has-text("跑步机")')
+  await p.waitForTimeout(150)
+  await p.click('.sheet-head .btn.primary')
+  await p.waitForTimeout(300)
   const cardio = p.locator('.entry:has-text("跑步机")')
   check('B11 有氧三字段', (await cardio.locator('.set-input').count()) === 3)
   // 计时：添加平板支撑
-  await p.click('text=＋ 添加动作'); await p.waitForTimeout(400)
-  await p.fill('.sheet-head input', '平板支撑'); await p.waitForTimeout(300)
-  await p.click('.pick:has-text("平板支撑")'); await p.waitForTimeout(150)
-  await p.click('.sheet-head .btn.primary'); await p.waitForTimeout(300)
+  await p.click('text=＋ 添加动作')
+  await p.waitForTimeout(400)
+  await p.fill('.sheet-head input', '平板支撑')
+  await p.waitForTimeout(300)
+  await p.click('.pick:has-text("平板支撑")')
+  await p.waitForTimeout(150)
+  await p.click('.sheet-head .btn.primary')
+  await p.waitForTimeout(300)
   check('B12 计时秒字段', (await p.locator('.entry:has-text("平板支撑") .set-input').count()) === 1)
   // 完成 → 保存
-  await p.click('text=完成'); await p.waitForTimeout(400)
+  await p.click('text=完成')
+  await p.waitForTimeout(400)
   check('B13 完成保存', !(await p.isVisible('.workout-head')))
   await p.close()
 }
@@ -93,66 +139,112 @@ async function fresh(seed) {
 /* ============ C. 计划页 ============ */
 {
   const p = await fresh({})
-  await p.click('.tabbar >> text=计划'); await p.waitForTimeout(300)
+  await p.click('.tabbar >> text=计划')
+  await p.waitForTimeout(300)
   check('C1 7 天排课', (await p.locator('.plan-day').count()) === 7)
-  await p.click('text=顺序轮换'); await p.waitForTimeout(250)
+  await p.click('text=顺序轮换')
+  await p.waitForTimeout(250)
   check('C2 轮换 3 项', (await p.locator('.rot-row').count()) === 3)
   // 模板编辑器：推日 → 改 Greyskull → 加超级组
-  await p.click('button.card:has-text("推日")'); await p.waitForTimeout(400)
-  await p.click('.edit-row:has-text("上斜哑铃卧推") .chip'); await p.waitForTimeout(150)
+  await p.click('button.card:has-text("推日")')
+  await p.waitForTimeout(400)
+  await p.click('.edit-row:has-text("上斜哑铃卧推") .chip')
+  await p.waitForTimeout(150)
   check('C3 超级组开启', (await page2count(p, '.section-title:has-text("动作")')).includes('超级组'))
   await p.locator('.num-field:has-text("加重") input').fill('5')
-  await p.click('text=保存模板'); await p.waitForTimeout(300)
-  check('C4 保存后副标题更新', (await p.locator('button.card:has-text("推日") .dim.small').textContent()).includes('+5kg'))
+  await p.click('text=保存模板')
+  await p.waitForTimeout(300)
+  check(
+    'C4 保存后副标题更新',
+    (await p.locator('button.card:has-text("推日") .dim.small').textContent()).includes('+5kg')
+  )
   await p.close()
 }
-function page2count(p, sel) { return p.locator(sel).first().textContent() }
+function page2count(p, sel) {
+  return p.locator(sel).first().textContent()
+}
 
 /* ============ D. 历史页 ============ */
 {
   const p = await fresh({
     workouts: [0, 3, 7].map((d, i) => ({
-      id: 'w' + i, name: '推日', rid: 'push', start: Date.now() - d * 864e5, end: Date.now() - d * 864e5 + 36e5, volume: 2000 + i,
-      entries: [{ exId: 'bench', name: '杠铃卧推', type: 'reps', m: '胸', eq: '杠铃', sets: [{ kg: 60 + i * 2.5, reps: 8, done: true, rir: 2 }] },
-                { exId: 'plank', name: '平板支撑', type: 'time', m: '核心', sets: [{ sec: 60, done: true }] }],
+      id: 'w' + i,
+      name: '推日',
+      rid: 'push',
+      start: Date.now() - d * 864e5,
+      end: Date.now() - d * 864e5 + 36e5,
+      volume: 2000 + i,
+      entries: [
+        {
+          exId: 'bench',
+          name: '杠铃卧推',
+          type: 'reps',
+          m: '胸',
+          eq: '杠铃',
+          sets: [{ kg: 60 + i * 2.5, reps: 8, done: true, rir: 2 }],
+        },
+        { exId: 'plank', name: '平板支撑', type: 'time', m: '核心', sets: [{ sec: 60, done: true }] },
+      ],
     })),
-    bodyweight: [{ d: '2026-10-08', t: 1, kg: 73 }, { d: '2026-10-10', t: 2, kg: 72.4 }],
+    bodyweight: [
+      { d: '2026-10-08', t: 1, kg: 73 },
+      { d: '2026-10-10', t: 2, kg: 72.4 },
+    ],
   })
-  await p.click('.tabbar >> text=历史'); await p.waitForTimeout(500)
+  await p.click('.tabbar >> text=历史')
+  await p.waitForTimeout(500)
   check('D1 统计卡渲染', (await p.locator('.stat-row .card').count()) === 3)
-  check('D2 1RM 曲线', (await p.locator('.ex-chips .chip').count()) >= 1 && (await p.locator('.spark').count()) >= 1)
+  check(
+    'D2 1RM 曲线',
+    (await p.locator('.ex-chips .chip').count()) >= 1 && (await p.locator('.spark').count()) >= 1
+  )
   const hmCount = await p.locator('.hm-cell').count()
   check('D3 热力图渲染', hmCount >= 364 && hmCount % 7 === 0, '实际 ' + hmCount)
   check('D4 肌肉图双视图', (await p.locator('.bm-v').count()) === 2)
-  await p.click('text=恢复'); await p.waitForTimeout(200)
+  await p.click('text=恢复')
+  await p.waitForTimeout(200)
   check('D5 肌肉图恢复模式', (await p.locator('.bm-m:not(.l0)').count()) > 0)
   // 记录详情：计时+力量+RIR 显示
-  await p.click('.card-open >> nth=0'); await p.waitForTimeout(250)
+  await p.click('.card-open >> nth=0')
+  await p.waitForTimeout(250)
   const allDetail = (await p.locator('.detail .mono').allTextContents()).join(' | ')
   check('D6 详情含秒/RIR', allDetail.includes('秒') && allDetail.includes('R2'), allDetail)
   // 编辑 → 改日期 → 保存
-  await p.click('text=编辑'); await p.waitForTimeout(300)
+  await p.click('text=编辑')
+  await p.waitForTimeout(300)
   await p.fill('input[type=date]', new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10))
-  await p.click('.sheet .btn.primary:has-text("保存")'); await p.waitForTimeout(300)
+  await p.click('.sheet .btn.primary:has-text("保存")')
+  await p.waitForTimeout(300)
   check('D7 编辑保存无崩溃', (await p.locator('h1').textContent()) === '历史')
   // 体重目标线
-  await p.click('.tabbar >> text=设置'); await p.waitForTimeout(250)
+  await p.click('.tabbar >> text=设置')
+  await p.waitForTimeout(250)
   await p.fill('input[placeholder="不设"]', '70')
-  await p.locator('input[placeholder="不设"]').blur(); await p.waitForTimeout(200)
-  await p.click('.tabbar >> text=历史'); await p.waitForTimeout(300)
+  await p.locator('input[placeholder="不设"]').blur()
+  await p.waitForTimeout(200)
+  await p.click('.tabbar >> text=历史')
+  await p.waitForTimeout(300)
   check('D8 目标虚线', (await p.locator('.spark line').count()) >= 1)
   // 删除记录（确认流程）
   const cardsBefore = await p.locator('.card:has(.card-open)').count()
-  await p.click('.card-open >> nth=0'); await p.waitForTimeout(200)
-  await p.locator('button:has-text("删除")').last().click(); await p.waitForTimeout(200)
-  await p.locator('button:has-text("确认删除")').last().click(); await p.waitForTimeout(400)
-  check('D9 删除记录', (await p.locator('.card:has(.card-open)').count()) === cardsBefore - 1, `前${cardsBefore} 后${await p.locator('.card:has(.card-open)').count()}`)
+  await p.click('.card-open >> nth=0')
+  await p.waitForTimeout(200)
+  await p.locator('button:has-text("删除")').last().click()
+  await p.waitForTimeout(200)
+  await p.locator('button:has-text("确认删除")').last().click()
+  await p.waitForTimeout(400)
+  check(
+    'D9 删除记录',
+    (await p.locator('.card:has(.card-open)').count()) === cardsBefore - 1,
+    `前${cardsBefore} 后${await p.locator('.card:has(.card-open)').count()}`
+  )
   await p.close()
 }
 /* ============ E. 设置页 ============ */
 {
   const p = await fresh({})
-  await p.click('.tabbar >> text=设置'); await p.waitForTimeout(300)
+  await p.click('.tabbar >> text=设置')
+  await p.waitForTimeout(300)
   check('E1 休息时长 chips', (await p.locator('.chip:has-text("90s")').count()) === 1)
   check('E2 RIR 开关', await p.isVisible('text=记录 RIR 努力度'))
   check('E3 配重卡', await p.isVisible('text=杠铃配重'))
@@ -161,8 +253,17 @@ function page2count(p, sel) { return p.locator(sel).first().textContent() }
   // 连接假地址 → 友好报错
   await p.fill('input[placeholder*="服务器地址"]', 'https://example.invalid')
   await p.fill('input[placeholder*="昵称"]', '矩阵测试')
-  await p.locator('button:has-text("连接")').last().click(); await p.waitForTimeout(900)
-  check('E6 假地址友好报错', (await p.locator('.toast').textContent().catch(() => '')).includes('无法连接'))
+  await p.locator('button:has-text("连接")').last().click()
+  await p.waitForTimeout(900)
+  check(
+    'E6 假地址友好报错',
+    (
+      await p
+        .locator('.toast')
+        .textContent()
+        .catch(() => '')
+    ).includes('无法连接')
+  )
   await p.close()
   errors.length = 0 // E6 故意连假地址的预期网络错误不计入后续健壮性检查
 }
@@ -170,31 +271,56 @@ function page2count(p, sel) { return p.locator(sel).first().textContent() }
 /* ============ F. 脏数据健壮性 ============ */
 {
   const p = await fresh({
-    workouts: [null, { id: 'bad' }, { id: 'ok', entries: [{ exId: 'bench', name: '卧推', type: 'reps', sets: [{ kg: 60, reps: 8, done: true }] }] },
-               { id: 'w-null-entry', entries: [null, { exId: 'squat', name: '深蹲', type: 'reps', sets: [{ kg: 100, reps: 5, done: true }] }] }],
+    workouts: [
+      null,
+      { id: 'bad' },
+      {
+        id: 'ok',
+        entries: [{ exId: 'bench', name: '卧推', type: 'reps', sets: [{ kg: 60, reps: 8, done: true }] }],
+      },
+      {
+        id: 'w-null-entry',
+        entries: [
+          null,
+          { exId: 'squat', name: '深蹲', type: 'reps', sets: [{ kg: 100, reps: 5, done: true }] },
+        ],
+      },
+    ],
     bodyweight: [null, { d: 'x', kg: 70 }],
     customEx: [null, { id: 'c1', n: '自定' }],
     plan: { mode: 'rotation', rotation: [null, 'push'] },
   })
   for (const tab of ['首页', '训练', '计划', '历史', '设置']) {
-    await p.click(`.tabbar >> text=${tab}`); await p.waitForTimeout(250)
+    await p.click(`.tabbar >> text=${tab}`)
+    await p.waitForTimeout(250)
     // 训练页无 h1（空态设计），以无页面错误 + 内容可见为准
-    const ok = errors.filter(e => e.includes('pageerror')).length === 0 && (await p.locator('.page').count()) >= 1
+    const ok =
+      errors.filter(e => e.includes('pageerror')).length === 0 && (await p.locator('.page').count()) >= 1
     check('F 五页脏数据不崩: ' + tab, ok)
   }
-  check('F2 存储自愈写回', await p.evaluate(() => {
-    const s = JSON.parse(localStorage.getItem('gym_gym_v1')).state
-    return !s.workouts.some(w => !w || !Array.isArray(w.entries)) && s.workouts.length === 2
-  }))
+  check(
+    'F2 存储自愈写回',
+    await p.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+      return !s.workouts.some(w => !w || !Array.isArray(w.entries)) && s.workouts.length === 2
+    })
+  )
   await p.close()
 }
 
 /* ============ G. 多机型 ============ */
-for (const [w, h, name] of [[375, 667, 'SE'], [430, 932, 'ProMax'], [1280, 800, '桌面']]) {
+for (const [w, h, name] of [
+  [375, 667, 'SE'],
+  [430, 932, 'ProMax'],
+  [1280, 800, '桌面'],
+]) {
   const p = await browser.newPage({ viewport: { width: w, height: h }, isMobile: w < 800 })
-  await p.goto(BASE + '/', { waitUntil: 'networkidle' }); await p.waitForTimeout(500)
+  await p.goto(BASE + '/', { waitUntil: 'networkidle' })
+  await p.waitForTimeout(500)
   const hscroll = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-  const gap = await p.evaluate(() => Math.round(innerHeight - document.querySelector('.tabbar').getBoundingClientRect().bottom))
+  const gap = await p.evaluate(() =>
+    Math.round(innerHeight - document.querySelector('.tabbar').getBoundingClientRect().bottom)
+  )
   check(`G ${name} 无横滚+底栏贴合`, hscroll === 0 && gap === 0, `横滚${hscroll} gap${gap}`)
   await p.close()
 }
@@ -204,7 +330,15 @@ const fails = results.filter(r => r[0] === 'FAIL')
 console.log('========== 测试矩阵 ==========')
 for (const r of results) if (r[0] !== 'INFO') console.log(r.join('  '))
 console.log('========== 汇总 ==========')
-console.log(`通过 ${results.filter(r => r[0] === 'PASS').length} / ${results.filter(r => r[0] === 'PASS').length + fails.length}`)
-if (fails.length) { console.log('失败项:'); fails.forEach(f => console.log(' ✗ ' + f[1] + ' ' + f[2])) }
-if (errors.length) { console.log('页面错误:'); errors.slice(0, 5).forEach(e => console.log(' ' + e)) } else console.log('零控制台错误')
+console.log(
+  `通过 ${results.filter(r => r[0] === 'PASS').length} / ${results.filter(r => r[0] === 'PASS').length + fails.length}`
+)
+if (fails.length) {
+  console.log('失败项:')
+  fails.forEach(f => console.log(' ✗ ' + f[1] + ' ' + f[2]))
+}
+if (errors.length) {
+  console.log('页面错误:')
+  errors.slice(0, 5).forEach(e => console.log(' ' + e))
+} else console.log('零控制台错误')
 process.exit(0)

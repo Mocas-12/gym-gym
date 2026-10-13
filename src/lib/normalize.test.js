@@ -7,8 +7,8 @@ describe('normalizeState（历史页崩溃的终极防线）', () => {
       workouts: [
         null,
         { id: 'w1', entries: [{ exId: 'bench', sets: [{ kg: 60, reps: 8, done: true }] }, null] },
-        { id: 'bad' },                                             // 缺 entries
-        { id: 'w2', entries: [null, { exId: 'x', sets: [] }] },    // null 条目被剔除，有效条目保留
+        { id: 'bad' }, // 缺 entries
+        { id: 'w2', entries: [null, { exId: 'x', sets: [] }] }, // null 条目被剔除，有效条目保留
       ],
       bodyweight: [null, { d: '2026-10-12', kg: 72 }],
       customEx: [{ id: 'c1', n: '自定义' }, null, {}],

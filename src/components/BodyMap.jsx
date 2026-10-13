@@ -13,8 +13,12 @@ function useBodyPaths() {
     if (CACHE) return
     let alive = true
     PENDING = PENDING || import('../data/body-paths.json').then(m => (CACHE = m.default))
-    PENDING.then(p => { if (alive) setPaths(p) }).catch(() => {})
-    return () => { alive = false }
+    PENDING.then(p => {
+      if (alive) setPaths(p)
+    }).catch(() => {})
+    return () => {
+      alive = false
+    }
   }, [])
   return paths
 }
@@ -22,17 +26,18 @@ function useBodyPaths() {
 function View({ view, levels }) {
   return (
     <svg className="bm-v" viewBox={view.vb} role="img">
-      {INERT.map(slug => (view.p[slug] || []).map((d, i) =>
-        <path key={slug + i} className="bm-sil" d={d} />))}
-      {Object.entries(view.p).map(([slug, ds]) => INERT.includes(slug) ? null : ds.map((d, i) => (
-        <path
-          key={slug + i}
-          className={'bm-m l' + (levels[slug] || 0)}
-          d={d}
-        >
-          <title>{MUSCLE_ZH[slug] || slug}</title>
-        </path>
-      )))}
+      {INERT.map(slug =>
+        (view.p[slug] || []).map((d, i) => <path key={slug + i} className="bm-sil" d={d} />)
+      )}
+      {Object.entries(view.p).map(([slug, ds]) =>
+        INERT.includes(slug)
+          ? null
+          : ds.map((d, i) => (
+              <path key={slug + i} className={'bm-m l' + (levels[slug] || 0)} d={d}>
+                <title>{MUSCLE_ZH[slug] || slug}</title>
+              </path>
+            ))
+      )}
     </svg>
   )
 }

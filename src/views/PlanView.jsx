@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore.js'
-import { todayPlan, rotationNext, nextAssigned, DISPLAY_DAYS, WEEKDAY_CN } from '../lib/plan.js'
+import { rotationNext, DISPLAY_DAYS, WEEKDAY_CN } from '../lib/plan.js'
 import RoutineEdit, { cfgLabel } from '../components/RoutineEdit.jsx'
 
 /* 计划页：每周固定排课 / 顺序轮换 两种模式 + 模板管理入口 */
@@ -26,8 +26,18 @@ export default function PlanView() {
 
       <div className="card">
         <div className="row" style={{ marginTop: 0 }}>
-          <button className={'chip grow' + (plan.mode === 'week' ? ' on' : '')} onClick={() => setPlanMode('week')}>每周固定</button>
-          <button className={'chip grow' + (plan.mode === 'rotation' ? ' on' : '')} onClick={() => setPlanMode('rotation')}>顺序轮换</button>
+          <button
+            className={'chip grow' + (plan.mode === 'week' ? ' on' : '')}
+            onClick={() => setPlanMode('week')}
+          >
+            每周固定
+          </button>
+          <button
+            className={'chip grow' + (plan.mode === 'rotation' ? ' on' : '')}
+            onClick={() => setPlanMode('rotation')}
+          >
+            顺序轮换
+          </button>
         </div>
         <p className="dim small" style={{ marginTop: 10 }}>
           {plan.mode === 'week'
@@ -40,11 +50,24 @@ export default function PlanView() {
         <div className="card">
           {DISPLAY_DAYS.map(d => (
             <div key={d} className="plan-day">
-              <span className={'plan-dow' + (d === new Date().getDay() ? ' today' : '')}>{WEEKDAY_CN[d]}</span>
+              <span className={'plan-dow' + (d === new Date().getDay() ? ' today' : '')}>
+                {WEEKDAY_CN[d]}
+              </span>
               <div className="plan-chips">
-                <button className={'chip sm' + (!plan.week?.[d] ? ' on' : '')} onClick={() => assignDay(d, null)}>休息</button>
+                <button
+                  className={'chip sm' + (!plan.week?.[d] ? ' on' : '')}
+                  onClick={() => assignDay(d, null)}
+                >
+                  休息
+                </button>
                 {routines.map(r => (
-                  <button key={r.id} className={'chip sm' + (plan.week?.[d] === r.id ? ' on' : '')} onClick={() => assignDay(d, r.id)}>{r.name.split(' ')[0]}</button>
+                  <button
+                    key={r.id}
+                    className={'chip sm' + (plan.week?.[d] === r.id ? ' on' : '')}
+                    onClick={() => assignDay(d, r.id)}
+                  >
+                    {r.name.split(' ')[0]}
+                  </button>
                 ))}
               </div>
             </div>
@@ -58,15 +81,25 @@ export default function PlanView() {
               <span className="rot-n">{i + 1}</span>
               <span className="grow">{nameOf(rid)}</span>
               {nextRot === rid && <span className="accent small">下一个</span>}
-              <button className="icon-btn" onClick={() => moveRot(i, -1)}>↑</button>
-              <button className="icon-btn" onClick={() => moveRot(i, 1)}>↓</button>
-              <button className="icon-btn" onClick={() => setRotation(plan.rotation.filter(x => x !== rid))}>✕</button>
+              <button className="icon-btn" onClick={() => moveRot(i, -1)}>
+                ↑
+              </button>
+              <button className="icon-btn" onClick={() => moveRot(i, 1)}>
+                ↓
+              </button>
+              <button className="icon-btn" onClick={() => setRotation(plan.rotation.filter(x => x !== rid))}>
+                ✕
+              </button>
             </div>
           ))}
           <div className="plan-chips" style={{ marginTop: 8 }}>
-            {routines.filter(r => !plan.rotation.includes(r.id)).map(r => (
-              <button key={r.id} className="chip sm" onClick={() => setRotation([...plan.rotation, r.id])}>＋ {r.name.split(' ')[0]}</button>
-            ))}
+            {routines
+              .filter(r => !plan.rotation.includes(r.id))
+              .map(r => (
+                <button key={r.id} className="chip sm" onClick={() => setRotation([...plan.rotation, r.id])}>
+                  ＋ {r.name.split(' ')[0]}
+                </button>
+              ))}
           </div>
         </div>
       )}
@@ -77,7 +110,10 @@ export default function PlanView() {
           <div className="row-between">
             <div>
               <div className="card-title">{r.name}</div>
-              <div className="dim small">{r.exIds.length} 个动作 · {cfgLabel(r.cfg)}{r.supersets?.length ? ` · ${r.supersets.length} 组超级组` : ''}</div>
+              <div className="dim small">
+                {r.exIds.length} 个动作 · {cfgLabel(r.cfg)}
+                {r.supersets?.length ? ` · ${r.supersets.length} 组超级组` : ''}
+              </div>
             </div>
             <span className="chev">›</span>
           </div>
@@ -88,4 +124,3 @@ export default function PlanView() {
     </div>
   )
 }
-

@@ -3,8 +3,21 @@ import { isIOS } from '../lib/pwa.js'
 /* 内联小图标（iOS 风格线性图标，跟当前文字同色） */
 const ShareIcon = () => (
   <svg viewBox="0 0 24 24" className="il" aria-hidden>
-    <path d="M12 14.5V3.5M8.5 7 12 3.5 15.5 7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M7.5 10.5H7a3 3 0 0 0-3 3v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4a3 3 0 0 0-3-3h-.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path
+      d="M12 14.5V3.5M8.5 7 12 3.5 15.5 7"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M7.5 10.5H7a3 3 0 0 0-3 3v4a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-4a3 3 0 0 0-3-3h-.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
   </svg>
 )
 const AddIcon = () => (
@@ -38,21 +51,28 @@ export default function InstallGuide({ onClose }) {
   return (
     <div className="sheet-mask" onClick={onClose}>
       <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-head"><b>把 GymGym 装到主屏幕</b></div>
+        <div className="sheet-head">
+          <b>把 GymGym 装到主屏幕</b>
+        </div>
         <div className="sheet-body">
           <div className="guide">
             {steps.map((s, i) => (
               <div className="guide-step" key={i}>
                 <span className="guide-n">{i + 1}</span>
                 <div className="guide-body">
-                  <div className="guide-t">{s.icon}{s.t}</div>
+                  <div className="guide-t">
+                    {s.icon}
+                    {s.t}
+                  </div>
                   <div className="guide-d">{s.d}</div>
                 </div>
               </div>
             ))}
           </div>
           <p className="dim small guide-note">数据存在这台手机的浏览器里，装成 app 后不会被系统 7 天清除。</p>
-          <button className="btn primary block" onClick={onClose}>我知道了</button>
+          <button className="btn primary block" onClick={onClose}>
+            我知道了
+          </button>
         </div>
       </div>
     </div>

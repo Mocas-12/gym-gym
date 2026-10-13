@@ -3,10 +3,14 @@
 function I({ active, children }) {
   return (
     <svg
-      viewBox="0 0 24 24" width="23" height="23" fill="none"
+      viewBox="0 0 24 24"
+      width="23"
+      height="23"
+      fill="none"
       stroke="currentColor"
       strokeWidth={active ? 2 : 1.7}
-      strokeLinecap="round" strokeLinejoin="round"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
     >
       {children}

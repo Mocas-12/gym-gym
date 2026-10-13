@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { todayPlan, rotationNext, nextAssigned } from './plan.js'
+import { todayPlan, nextAssigned } from './plan.js'
 
 describe('week 模式', () => {
   const plan = { mode: 'week', week: { 1: 'push', 3: 'pull', 6: 'legs' } }
@@ -39,7 +39,9 @@ describe('nextAssigned 休息日提示', () => {
     expect(nextAssigned(plan, [], new Date(2026, 9, 13))).toEqual({ inDays: 6, rid: 'push' })
   })
   it('rotation 模式：下一个就是 0 天后', () => {
-    expect(nextAssigned({ mode: 'rotation', rotation: ['a', 'b'] }, [{ rid: 'a' }]))
-      .toEqual({ inDays: 0, rid: 'b' })
+    expect(nextAssigned({ mode: 'rotation', rotation: ['a', 'b'] }, [{ rid: 'a' }])).toEqual({
+      inDays: 0,
+      rid: 'b',
+    })
   })
 })

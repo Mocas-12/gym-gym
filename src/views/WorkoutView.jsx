@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import RestTimer from '../components/RestTimer.jsx'
@@ -15,7 +15,20 @@ const REST_OPTS = [45, 60, 90, 120, 150, 180]
 
 export default function WorkoutView() {
   const { active, settings } = useStore()
-  const { addEntry, removeEntry, addSet, updateSet, toggleDone, deleteSet, copySet, toggleWarmup, applyScheme, finishWorkout, discardWorkout, setEntryRest } = useStore()
+  const {
+    addEntry,
+    removeEntry,
+    addSet,
+    updateSet,
+    toggleDone,
+    deleteSet,
+    copySet,
+    toggleWarmup,
+    applyScheme,
+    finishWorkout,
+    discardWorkout,
+    setEntryRest,
+  } = useStore()
   const { startRest, toast } = useUI()
   const [now, setNow] = useState(Date.now())
   const [picking, setPicking] = useState(false)
@@ -25,11 +38,25 @@ export default function WorkoutView() {
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000)
     let lock = null
-    const acquire = async () => { try { lock = await navigator.wakeLock?.request('screen') } catch { /* 不支持/被拒 */ } }
+    const acquire = async () => {
+      try {
+        lock = await navigator.wakeLock?.request('screen')
+      } catch {
+        /* 不支持/被拒 */
+      }
+    }
     if (active) acquire()
-    const onVis = () => { if (document.visibilityState === 'visible' && active) acquire() }
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && active) acquire()
+    }
     document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(tick); document.removeEventListener('visibilitychange', onVis); try { lock?.release() } catch { } }
+    return () => {
+      clearInterval(tick)
+      document.removeEventListener('visibilitychange', onVis)
+      try {
+        lock?.release()
+      } catch {}
+    }
   }, [active != null])
 
   if (!active) {
@@ -37,7 +64,14 @@ export default function WorkoutView() {
       <div className="page empty-page">
         <div className="empty-icon">🏋️</div>
         <p className="dim">没有进行中的训练</p>
-        <button className="btn primary" onClick={() => { location.hash = '#/home' }}>去开始一个</button>
+        <button
+          className="btn primary"
+          onClick={() => {
+            location.hash = '#/home'
+          }}
+        >
+          去开始一个
+        </button>
       </div>
     )
   }
@@ -59,7 +93,7 @@ export default function WorkoutView() {
     const rest = toggleDone(en.exId, i)
     if (rest > 0) {
       const partner = supPartner(en)
-      const label = partner ? `↔ 接着做 ${partner}` : (en.type === 'time' ? en.name : `${en.name} · 下一组`)
+      const label = partner ? `↔ 接着做 ${partner}` : en.type === 'time' ? en.name : `${en.name} · 下一组`
       startRest(rest, label)
       navigator.vibrate?.(60)
     }
@@ -73,7 +107,9 @@ export default function WorkoutView() {
     const kg = [...(en.sets || [])].reverse().find(s => s.kg > 0)?.kg
     if (!kg) return null
     const { perSide, leftover, tooLight } = platesFor(kg, plates.bar, plates.avail)
-    return tooLight ? `${kg}kg 轻于空杆（${plates.bar}kg）` : `每边：${fmtPlates(perSide)}${leftover ? ` · 差 ${leftover}kg 没有合适的片` : ''}`
+    return tooLight
+      ? `${kg}kg 轻于空杆（${plates.bar}kg）`
+      : `每边：${fmtPlates(perSide)}${leftover ? ` · 差 ${leftover}kg 没有合适的片` : ''}`
   }
 
   return (
@@ -85,13 +121,31 @@ export default function WorkoutView() {
           <div className="dim mono">{fmtElapsed(now - active.start)}</div>
         </div>
         <div className="row">
-          <button className="btn ghost" onClick={() => { if (confirm('放弃这次训练？记录不会保存。')) { discardWorkout(); location.hash = '#/home' } }}>放弃</button>
-          <button className="btn primary" onClick={() => {
-            const w = finishWorkout()
-            if (!w) { toast('还没有完成任何一组'); return }
-            toast(`已保存 · ${w.entries.length} 个动作${w.prs?.length ? ` · 🎉 ${w.prs.length} 个PR` : ''}`)
-            location.hash = '#/home'
-          }}>完成</button>
+          <button
+            className="btn ghost"
+            onClick={() => {
+              if (confirm('放弃这次训练？记录不会保存。')) {
+                discardWorkout()
+                location.hash = '#/home'
+              }
+            }}
+          >
+            放弃
+          </button>
+          <button
+            className="btn primary"
+            onClick={() => {
+              const w = finishWorkout()
+              if (!w) {
+                toast('还没有完成任何一组')
+                return
+              }
+              toast(`已保存 · ${w.entries.length} 个动作${w.prs?.length ? ` · 🎉 ${w.prs.length} 个PR` : ''}`)
+              location.hash = '#/home'
+            }}
+          >
+            完成
+          </button>
         </div>
       </div>
 
@@ -106,8 +160,15 @@ export default function WorkoutView() {
                 {partner && <span className="dim small sup-tag"> ↔ {partner}</span>}
               </div>
               <div className="row" style={{ marginTop: 0 }}>
-                <button className="rest-chip" onClick={() => setRestPickFor(restPickFor === en.exId ? null : en.exId)}>⏱{restOf(en)}s</button>
-                <button className="icon-btn" title="移除动作" onClick={() => removeEntry(en.exId)}>✕</button>
+                <button
+                  className="rest-chip"
+                  onClick={() => setRestPickFor(restPickFor === en.exId ? null : en.exId)}
+                >
+                  ⏱{restOf(en)}s
+                </button>
+                <button className="icon-btn" title="移除动作" onClick={() => removeEntry(en.exId)}>
+                  ✕
+                </button>
               </div>
             </div>
             {en.note && <div className="target-note">{en.note}</div>}
@@ -118,11 +179,22 @@ export default function WorkoutView() {
             {restPickFor === en.exId && (
               <div className="rest-picker">
                 {REST_OPTS.map(s => (
-                  <button key={s} className={'chip' + (restOf(en) === s ? ' on' : '')} onClick={() => { setEntryRest(en.exId, s); setRestPickFor(null) }}>{s}s</button>
+                  <button
+                    key={s}
+                    className={'chip' + (restOf(en) === s ? ' on' : '')}
+                    onClick={() => {
+                      setEntryRest(en.exId, s)
+                      setRestPickFor(null)
+                    }}
+                  >
+                    {s}s
+                  </button>
                 ))}
               </div>
             )}
-            {en.sets.length === 0 && <div className="dim small">还没有组，点下方添加（或右滑上一行复制）</div>}
+            {en.sets.length === 0 && (
+              <div className="dim small">还没有组，点下方添加（或右滑上一行复制）</div>
+            )}
             {en.sets.map((s, i) => (
               <SetRow
                 key={i}
@@ -137,12 +209,16 @@ export default function WorkoutView() {
                 onToggleWarmup={() => toggleWarmup(en.exId, i)}
               />
             ))}
-            <button className="btn ghost block sm" onClick={() => addSet(en.exId)}>＋ 添加一组</button>
+            <button className="btn ghost block sm" onClick={() => addSet(en.exId)}>
+              ＋ 添加一组
+            </button>
           </div>
         )
       })}
 
-      <button className="btn ghost block" onClick={() => setPicking(true)}>＋ 添加动作</button>
+      <button className="btn ghost block" onClick={() => setPicking(true)}>
+        ＋ 添加动作
+      </button>
       {picking && (
         <ExercisePicker
           selected={active.entries.map(e => e.exId)}

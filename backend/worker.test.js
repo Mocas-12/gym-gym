@@ -10,8 +10,8 @@ const md = readFileSync(resolve(root, 'docs', 'SYNC_PUSH.md'), 'utf8')
 const m = md.match(/```js\n([\s\S]*?)\n```/)
 if (!m) throw new Error('docs/SYNC_PUSH.md 缺少代码块')
 const enc = new TextEncoder()
-const b64u = u8 => Buffer.from(u8).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-const b64uToU8 = s => { const t = s.replace(/-/g, '+').replace(/_/g, '/'); const bin = Buffer.from(t, 'base64'); return new Uint8Array(bin) }
+const b64u = u8 =>
+  Buffer.from(u8).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 let api
 
@@ -27,12 +27,27 @@ beforeAll(async () => {
 
 const makeEnv = () => {
   const store = new Map()
-  return { KV: { get: async k => (store.has(k) ? store.get(k) : null), put: async (k, v) => { store.set(k, String(v)) }, delete: async k => { store.delete(k) }, _store: store } }
+  return {
+    KV: {
+      get: async k => (store.has(k) ? store.get(k) : null),
+      put: async (k, v) => {
+        store.set(k, String(v))
+      },
+      delete: async k => {
+        store.delete(k)
+      },
+      _store: store,
+    },
+  }
 }
 const req = (url, { method = 'GET', token = '', body, origin = 'https://mocas-12.github.io' } = {}) =>
   new Request(url, {
     method,
-    headers: { 'content-type': 'application/json', origin, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: {
+      'content-type': 'application/json',
+      origin,
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 const call = (env, request) => api.handler.fetch(request, env, { waitUntil: p => p.catch(() => {}) })
@@ -55,18 +70,44 @@ describe('同步端点', () => {
     expect(r.status).toBe(401)
   })
   it('PUT → GET 往返；baseRev 过期 409 带服务器文档', async () => {
-    const p = await call(ENV, req(BASE + '/api/data', { method: 'PUT', token: TOKEN, body: { baseRev: 0, state: { workouts: [{ id: 1, entries: [{ exId: 'a', sets: [{ done: true }] }] }], settings: { restSec: 75 } } } }))
+    const p = await call(
+      ENV,
+      req(BASE + '/api/data', {
+        method: 'PUT',
+        token: TOKEN,
+        body: {
+          baseRev: 0,
+          state: {
+            workouts: [{ id: 1, entries: [{ exId: 'a', sets: [{ done: true }] }] }],
+            settings: { restSec: 75 },
+          },
+        },
+      })
+    )
     expect((await p.json()).rev).toBe(1)
     const g = await call(ENV, req(BASE + '/api/data', { token: TOKEN }))
     expect((await g.json()).state.settings.restSec).toBe(75)
-    const c = await call(ENV, req(BASE + '/api/data', { method: 'PUT', token: TOKEN, body: { baseRev: 0, state: { workouts: [] } } }))
+    const c = await call(
+      ENV,
+      req(BASE + '/api/data', { method: 'PUT', token: TOKEN, body: { baseRev: 0, state: { workouts: [] } } })
+    )
     expect(c.status).toBe(409)
     const cd = await c.json()
     expect(cd.rev).toBe(1)
     expect(cd.state.workouts).toHaveLength(1)
   })
   it('PUT 净化：null/无效训练不入库', async () => {
-    const r = await call(ENV, req(BASE + '/api/data', { method: 'PUT', token: TOKEN, body: { baseRev: 1, state: { workouts: [null, { id: 'x' }, { id: 'ok', entries: [{ exId: 'a', sets: [] }] }] } } }))
+    const r = await call(
+      ENV,
+      req(BASE + '/api/data', {
+        method: 'PUT',
+        token: TOKEN,
+        body: {
+          baseRev: 1,
+          state: { workouts: [null, { id: 'x' }, { id: 'ok', entries: [{ exId: 'a', sets: [] }] }] },
+        },
+      })
+    )
     expect(r.status).toBe(200)
     const g = await call(ENV, req(BASE + '/api/data', { token: TOKEN }))
     const st = (await g.json()).state
@@ -89,7 +130,13 @@ describe('Web Push 加密（RFC 8291 往返）', () => {
     const idlen = body[20]
     const ephPubRaw = body.slice(21, 21 + idlen)
     const cipher = body.slice(21 + idlen)
-    const ephPub = await crypto.subtle.importKey('raw', ephPubRaw, { name: 'ECDH', namedCurve: 'P-256' }, true, [])
+    const ephPub = await crypto.subtle.importKey(
+      'raw',
+      ephPubRaw,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,
+      []
+    )
     const shared = await crypto.subtle.deriveBits({ name: 'ECDH', public: ephPub }, clientPriv, 256)
     const info = new Uint8Array(19 + 65 + 65)
     info.set(enc.encode('WebPush: info\0'), 0)

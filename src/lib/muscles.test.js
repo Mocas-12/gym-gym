@@ -23,7 +23,13 @@ describe('weightsOf', () => {
 describe('regionLoad', () => {
   it('只计窗口内完成组（非热身），主辅加权', () => {
     const ws = [
-      w(1, [{ exId: 'bench', m: '胸', sets: [{ done: true }, { done: true }, { done: true, w: true }, { done: false }] }]),
+      w(1, [
+        {
+          exId: 'bench',
+          m: '胸',
+          sets: [{ done: true }, { done: true }, { done: true, w: true }, { done: false }],
+        },
+      ]),
       w(10, [{ exId: 'bench', m: '胸', sets: [{ done: true }] }]), // 窗口外
     ]
     const load = regionLoad(ws, 7, NOW)
@@ -34,28 +40,30 @@ describe('regionLoad', () => {
 
 describe('三种模式等级', () => {
   const ws = [
-    w(0, [{ exId: 'squat', m: '腿', sets: [{ done: true }, { done: true }, { done: true }, { done: true }] }]),
+    w(0, [
+      { exId: 'squat', m: '腿', sets: [{ done: true }, { done: true }, { done: true }, { done: true }] },
+    ]),
     w(6, [{ exId: 'bench', m: '胸', sets: [{ done: true }, { done: true }] }]),
     w(20, [{ exId: 'db-curl', m: '手臂', sets: [{ done: true }] }]),
   ]
   it('容量：相对最强肌群分档', () => {
     const lv = volumeLevels(regionLoad(ws, 7, NOW))
-    expect(lv.quadriceps).toBe(4)   // 4 组主发 = 最强
+    expect(lv.quadriceps).toBe(4) // 4 组主发 = 最强
     expect(lv.hamstring).toBeGreaterThanOrEqual(1) // 辅发也有色
-    expect(lv.biceps).toBe(0)       // 6 天前，窗口外
+    expect(lv.biceps).toBe(0) // 6 天前，窗口外
   })
   it('恢复：进度越高越亮，需求按肌群大小', () => {
     const lv = recoveryLevels(ws, NOW)
-    expect(lv.quadriceps).toBe(0)   // 今天刚练 72h 需求 → 进度 0
-    expect(lv.biceps).toBe(4)       // 6 天 > 48h 需求 → 完全恢复
+    expect(lv.quadriceps).toBe(0) // 今天刚练 72h 需求 → 进度 0
+    expect(lv.biceps).toBe(4) // 6 天 > 48h 需求 → 完全恢复
   })
   it('盲区：越久没练越亮，从没练过最亮', () => {
     const lv = neglectedLevels(ws, NOW)
-    expect(lv.quadriceps).toBe(0)   // 今天练过
-    expect(lv.biceps).toBe(3)       // 6 天
+    expect(lv.quadriceps).toBe(0) // 今天练过
+    expect(lv.biceps).toBe(3) // 6 天
     expect(lv['db-row'] === undefined).toBe(true)
-    expect(lv.forearm).toBe(3)      // 20 天前被弯举的辅发碰过
-    expect(lv.serratus).toBe(4)     // 从没练过
+    expect(lv.forearm).toBe(3) // 20 天前被弯举的辅发碰过
+    expect(lv.serratus).toBe(4) // 从没练过
   })
   it('所有肌群都有等级值', () => {
     const lv = neglectedLevels(ws, NOW)

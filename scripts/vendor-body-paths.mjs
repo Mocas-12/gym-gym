@@ -14,7 +14,8 @@ const dataUrl = 'data:text/javascript;charset=utf-8,' + encodeURIComponent(raw)
 const { default: all } = await import(dataUrl)
 
 const out = {
-  _source: 'MuscleMap by Melih Colpan — MIT License — https://github.com/melihcolpan/MuscleMap (converted to SVG paths by openGym, AGPL)',
+  _source:
+    'MuscleMap by Melih Colpan — MIT License — https://github.com/melihcolpan/MuscleMap (converted to SVG paths by openGym, AGPL)',
   front: all.male.front,
   back: all.male.back,
 }

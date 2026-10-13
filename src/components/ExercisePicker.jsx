@@ -18,9 +18,8 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
     const t = q.trim().toLowerCase()
     return MUSCLES.map(m => ({
       m,
-      items: list.filter(e =>
-        e.m === m && (!eq || e.eq === eq) &&
-        (!t || e.n.toLowerCase().includes(t) || e.id.includes(t))
+      items: list.filter(
+        e => e.m === m && (!eq || e.eq === eq) && (!t || e.n.toLowerCase().includes(t) || e.id.includes(t))
       ),
     })).filter(g => g.items.length)
   }, [q, eq, list, custom])
@@ -29,7 +28,9 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
    * 连续 translate 会和 iOS 橡皮筋滚动互相打架导致卡死），直到选择器关闭 */
   const [topMode, setTopMode] = useState(false)
   useEffect(() => {
-    const on = e => { if (e.target.closest('input')) setTopMode(true) }
+    const on = e => {
+      if (e.target.closest('input')) setTopMode(true)
+    }
     const el = document.body
     el.addEventListener('focusin', on)
     return () => el.removeEventListener('focusin', on)
@@ -46,10 +47,7 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
 
   return createPortal(
     <div className={'sheet-mask' + (topMode ? ' kb-top' : '')} onClick={onClose}>
-      <div
-        className="sheet"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="sheet" onClick={e => e.stopPropagation()}>
         <div className="sheet-head">
           <input
             className="input grow"
@@ -57,26 +55,46 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
             autoFocus
             value={q}
             onChange={e => setQ(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && q.trim() && !shown.some(g => g.items.length)) addCustom() }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && q.trim() && !shown.some(g => g.items.length)) addCustom()
+            }}
           />
-          <button className="icon-btn" title="关闭" onClick={onClose}>✕</button>
-          <button className="btn primary" onClick={onClose}>完成{selected.length ? `(${selected.length})` : ''}</button>
+          <button className="icon-btn" title="关闭" onClick={onClose}>
+            ✕
+          </button>
+          <button className="btn primary" onClick={onClose}>
+            完成{selected.length ? `(${selected.length})` : ''}
+          </button>
         </div>
         <div className="eq-filter">
-          <button className={'chip sm' + (eq === null ? ' on' : '')} onClick={() => setEq(null)}>全部</button>
+          <button className={'chip sm' + (eq === null ? ' on' : '')} onClick={() => setEq(null)}>
+            全部
+          </button>
           {EQUIPMENT.map(x => (
-            <button key={x} className={'chip sm' + (eq === x ? ' on' : '')} onClick={() => setEq(eq === x ? null : x)}>{x}</button>
+            <button
+              key={x}
+              className={'chip sm' + (eq === x ? ' on' : '')}
+              onClick={() => setEq(eq === x ? null : x)}
+            >
+              {x}
+            </button>
           ))}
         </div>
         <div className="sheet-body">
           {shown.length === 0 && q.trim() && (
-            <button className="btn ghost block" onClick={addCustom}>＋ 创建自定义练习「{q.trim()}」</button>
+            <button className="btn ghost block" onClick={addCustom}>
+              ＋ 创建自定义练习「{q.trim()}」
+            </button>
           )}
           {shown.map(g => (
             <div key={g.m}>
               <div className="group-title">{g.m}</div>
               {g.items.map(ex => (
-                <button key={ex.id} className={'pick' + (selected.includes(ex.id) ? ' picked' : '')} onClick={() => onToggle(ex)}>
+                <button
+                  key={ex.id}
+                  className={'pick' + (selected.includes(ex.id) ? ' picked' : '')}
+                  onClick={() => onToggle(ex)}
+                >
                   <span>{ex.n}</span>
                   <span className="pick-eq">{selected.includes(ex.id) ? '✓ 已选' : ex.eq}</span>
                 </button>

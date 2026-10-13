@@ -11,7 +11,10 @@ export default function RestTimer() {
   const { restUntil, restLabel, addRest, stopRest, finishRest } = useUI()
   const [left, setLeft] = useState(0)
   useEffect(() => {
-    if (!restUntil) { setLeft(0); return }
+    if (!restUntil) {
+      setLeft(0)
+      return
+    }
     const tm = setInterval(() => {
       const ms = restUntil - Date.now()
       if (ms <= 0) finishRest()
@@ -26,8 +29,12 @@ export default function RestTimer() {
       <div className="rest-num">{fmt(left)}</div>
       <div className="rest-label">{restLabel || '休息'}</div>
       <div className="rest-btns">
-        <button className="btn ghost sm" onClick={() => addRest(30)}>+30s</button>
-        <button className="btn ghost sm" onClick={stopRest}>跳过</button>
+        <button className="btn ghost sm" onClick={() => addRest(30)}>
+          +30s
+        </button>
+        <button className="btn ghost sm" onClick={stopRest}>
+          跳过
+        </button>
       </div>
     </div>
   )

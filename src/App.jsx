@@ -36,7 +36,12 @@ export default function App() {
           {route === 'settings' && <SettingsView />}
         </ErrorBoundary>
       </main>
-      <TabBar route={route} go={r => { location.hash = '#/' + r }} />
+      <TabBar
+        route={route}
+        go={r => {
+          location.hash = '#/' + r
+        }}
+      />
       {toastMsg && <div className="toast">{toastMsg}</div>}
     </div>
   )

@@ -19,7 +19,9 @@ function beep(times = 3) {
       o.start(audioCtx.currentTime + i * 0.45)
       o.stop(audioCtx.currentTime + i * 0.45 + 0.4)
     }
-  } catch { /* 无声环境（未交互过等） */ }
+  } catch {
+    /* 无声环境（未交互过等） */
+  }
 }
 
 export const useUI = create((set, get) => ({
@@ -32,10 +34,14 @@ export const useUI = create((set, get) => ({
     // 已配置云同步 → 服务器定时推送（手表随 iPhone 镜像），页面被冻结也能收到
     const { sync } = useStore.getState()
     if (sync.url && sync.token && sec >= 30) {
-      restPush(sync.url, sync.token, sec, label).then(r => { if (r?.id) set({ restPushId: r.id }) })
+      restPush(sync.url, sync.token, sec, label).then(r => {
+        if (r?.id) set({ restPushId: r.id })
+      })
     }
   },
-  addRest(sec) { set({ restUntil: Math.max(get().restUntil, Date.now()) + sec * 1000 }) },
+  addRest(sec) {
+    set({ restUntil: Math.max(get().restUntil, Date.now()) + sec * 1000 })
+  },
   stopRest() {
     const { sync, restPushId } = useStore.getState()
     if (restPushId) restPushCancel(sync.url, sync.token, restPushId)

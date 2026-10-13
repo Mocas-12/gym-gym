@@ -4,15 +4,20 @@ import { chromium } from 'playwright'
 
 const FALLBACK = 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe'
 const launch = async () => {
-  try { return await chromium.launch() }
-  catch { return await chromium.launch({ executablePath: process.env.CHROME_PATH || FALLBACK }) }
+  try {
+    return await chromium.launch()
+  } catch {
+    return await chromium.launch({ executablePath: process.env.CHROME_PATH || FALLBACK })
+  }
 }
 
 const browser = await launch()
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
 const errors = []
 page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message))
-page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()) })
+page.on('console', m => {
+  if (m.type() === 'error') errors.push('CONSOLE: ' + m.text())
+})
 await page.goto('http://localhost:8901/')
 await page.waitForTimeout(800)
 const h1 = await page.textContent('h1')
@@ -39,6 +44,9 @@ await page.waitForTimeout(400)
 await page.click('.tabbar >> text=历史')
 await page.waitForTimeout(400)
 console.log('history cards:', await page.locator('.card').count())
-if (errors.length) { console.error('ERRORS:', errors.join(' | ')); process.exit(1) }
+if (errors.length) {
+  console.error('ERRORS:', errors.join(' | '))
+  process.exit(1)
+}
 console.log('ERRORS: none')
 await browser.close()

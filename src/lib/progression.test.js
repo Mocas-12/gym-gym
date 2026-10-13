@@ -3,7 +3,9 @@ import { nextTarget, sessionsOf, DEFAULT_CFG, deloadKg } from './progression.js'
 
 let seq = 0
 const w = (exId, sets, daysAgo = 0) => ({
-  id: 'w' + (++seq), start: Date.now() - daysAgo * 86400000, end: Date.now(),
+  id: 'w' + ++seq,
+  start: Date.now() - daysAgo * 86400000,
+  end: Date.now(),
   entries: [{ exId, sets: sets.map(s => ({ ...s, done: true })) }],
 })
 const cfg = DEFAULT_CFG() // double 6-10, inc 2.5
@@ -23,15 +25,30 @@ describe('sessionsOf', () => {
 
 describe('双进程', () => {
   it('全部顶到 max → 加重，次数回到 min', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+      ]),
+    ]
     expect(nextTarget(cfg, ws, 'bench')).toMatchObject({ kg: 62.5, reps: 6 })
   })
   it('有组不足 min → 减载 10%', () => {
-    const ws = [w('bench', [{ kg: 62.5, reps: 5 }, { kg: 62.5, reps: 8 }])]
+    const ws = [
+      w('bench', [
+        { kg: 62.5, reps: 5 },
+        { kg: 62.5, reps: 8 },
+      ]),
+    ]
     expect(nextTarget(cfg, ws, 'bench')).toMatchObject({ kg: deloadKg(62.5), reps: 6 })
   })
   it('区间内 → 重量不变，次数 +1 往上推', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 8 }, { kg: 60, reps: 7 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 8 },
+        { kg: 60, reps: 7 },
+      ]),
+    ]
     expect(nextTarget(cfg, ws, 'bench')).toMatchObject({ kg: 60, reps: 9 })
   })
 })
@@ -39,7 +56,12 @@ describe('双进程', () => {
 describe('线性', () => {
   const lin = { scheme: 'linear', inc: 2.5, reps: 8 }
   it('全中 → 加重', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 8 }, { kg: 60, reps: 9 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 8 },
+        { kg: 60, reps: 9 },
+      ]),
+    ]
     expect(nextTarget(lin, ws, 'bench')).toMatchObject({ kg: 62.5, reps: 8 })
   })
   it('第一次没中 → 重量不变', () => {
@@ -55,11 +77,23 @@ describe('线性', () => {
 describe('Greyskull LP', () => {
   const gk = { scheme: 'greyskull', inc: 2.5, reps: 5, bonusInc: 2.5 }
   it('全中 → 加重', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 5 }, { kg: 60, reps: 5 }, { kg: 60, reps: 6 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 5 },
+        { kg: 60, reps: 5 },
+        { kg: 60, reps: 6 },
+      ]),
+    ]
     expect(nextTarget(gk, ws, 'bench')).toMatchObject({ kg: 62.5 })
   })
   it('最后一组冲到目标+2 → 双倍加重', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 5 }, { kg: 60, reps: 5 }, { kg: 60, reps: 7 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 5 },
+        { kg: 60, reps: 5 },
+        { kg: 60, reps: 7 },
+      ]),
+    ]
     expect(nextTarget(gk, ws, 'bench')).toMatchObject({ kg: 65 })
   })
   it('连续两次没中 → 减载', () => {
@@ -71,16 +105,35 @@ describe('Greyskull LP', () => {
 describe('三进程', () => {
   const tp = { scheme: 'triple', inc: 2.5, min: 6, max: 10, sets: 3, setsMax: 4 }
   it('全部顶到 max 但组数没满 → 加一组', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+      ]),
+    ]
     const t = nextTarget(tp, ws, 'bench')
     expect(t).toMatchObject({ kg: 60, reps: 10, sets: 4 })
   })
   it('组数加满且全中 → 加重回下限和基础组数', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }, { kg: 60, reps: 10 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+        { kg: 60, reps: 10 },
+      ]),
+    ]
     expect(nextTarget(tp, ws, 'bench')).toMatchObject({ kg: 62.5, reps: 6, sets: 3 })
   })
   it('区间内 → 次数上推', () => {
-    const ws = [w('bench', [{ kg: 60, reps: 8 }, { kg: 60, reps: 7 }, { kg: 60, reps: 8 }])]
+    const ws = [
+      w('bench', [
+        { kg: 60, reps: 8 },
+        { kg: 60, reps: 7 },
+        { kg: 60, reps: 8 },
+      ]),
+    ]
     expect(nextTarget(tp, ws, 'bench')).toMatchObject({ kg: 60, reps: 9, sets: 3 })
   })
 })
@@ -115,14 +168,23 @@ describe('边界', () => {
     expect(nextTarget(null, ws, 'bench')).toBeNull()
   })
   it('只跳过未完成/零重量组', () => {
-    const ws = [{
-      id: 'wx', start: Date.now(), end: Date.now(),
-      entries: [{ exId: 'bench', sets: [
-        { kg: 60, reps: 10, done: false },   // 未完成 → 不算
-        { kg: 0, reps: 10, done: true },     // 零重量 → 不算
-        { kg: 55, reps: 10, done: true },    // 有效：55kg×10 顶到 max → 57.5
-      ] }],
-    }]
+    const ws = [
+      {
+        id: 'wx',
+        start: Date.now(),
+        end: Date.now(),
+        entries: [
+          {
+            exId: 'bench',
+            sets: [
+              { kg: 60, reps: 10, done: false }, // 未完成 → 不算
+              { kg: 0, reps: 10, done: true }, // 零重量 → 不算
+              { kg: 55, reps: 10, done: true }, // 有效：55kg×10 顶到 max → 57.5
+            ],
+          },
+        ],
+      },
+    ]
     expect(nextTarget(cfg, ws, 'bench').kg).toBe(57.5)
   })
 })

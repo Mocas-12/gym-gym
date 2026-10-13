@@ -6,7 +6,7 @@ import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
 import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
-import { pullData, pushData } from '../lib/sync.js'
+import { pushData } from '../lib/sync.js'
 import { normalizeState } from '../lib/normalize.js'
 
 /* 启动自愈（第一优先）：store 初始化之前就把持久层里的脏数据洗掉。
@@ -23,10 +23,16 @@ try {
       }
     }
   }
-} catch { /* 存储不可读时让 zustand 走默认初始化 */ }
+} catch {
+  /* 存储不可读时让 zustand 走默认初始化 */
+}
 
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
-const uid = () => [...crypto.getRandomValues(new Uint8Array(8))].map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 11)
+const uid = () =>
+  [...crypto.getRandomValues(new Uint8Array(8))]
+    .map(x => x.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 11)
 const today = () => new Date().toISOString().slice(0, 10)
 
 /* 超级组：routine.supersets 是按相邻行分组的多组数组（如 [['bench','ohp']]）。
@@ -43,13 +49,13 @@ export const useStore = create(
   persist(
     (set, get) => ({
       settings: { restSec: 90, sound: true, vibrate: true },
-      customEx: [],          // 用户自建练习
+      customEx: [], // 用户自建练习
       routines: PRESET_ROUTINES,
       plan: { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
       sync: { url: '', token: '', uid: '', rev: 0, lastSync: 0 },
-      workouts: [],          // {id, d, name, rid, start, end, entries, volume, prs}
-      bodyweight: [],        // {d, t, kg}
-      active: null,          // 进行中的训练，结构同 workouts 条目
+      workouts: [], // {id, d, name, rid, start, end, entries, volume, prs}
+      bodyweight: [], // {d, t, kg}
+      active: null, // 进行中的训练，结构同 workouts 条目
 
       /* ---- 训练 ---- */
       /* 从渐进引擎/预填构建该动作的初始组。cfg 来自所从的 routine（null=自由训练只预填）。 */
@@ -58,19 +64,30 @@ export const useStore = create(
         const t = nextTarget(cfg, workouts, exId)
         if (t) {
           const n = t.sets || 3
-          return { sets: Array.from({ length: n }, () => ({ kg: t.kg, reps: t.reps, done: false })), note: t.note }
+          return {
+            sets: Array.from({ length: n }, () => ({ kg: t.kg, reps: t.reps, done: false })),
+            note: t.note,
+          }
         }
         return { sets: prefillFor(exId, workouts), note: null }
       },
       startWorkout(name = '自由训练', entryIds = [], rid = null) {
         const routine = rid ? get().routines.find(r => r.id === rid) : null
         const entries = entryIds.map(id => {
-          const ex = get().allEx().find(e => e.id === id)
+          const ex = get()
+            .allEx()
+            .find(e => e.id === id)
           const { sets, note } = get().buildSets(id, routine?.cfg || null)
           return {
-            exId: id, name: ex?.n || id, type: ex?.type || 'reps', m: ex?.m || null, eq: ex?.eq || null,
-            restSec: ex?.rest ?? null, sup: supIndexOf(routine, id),
-            sets, ...(note ? { note } : {}),
+            exId: id,
+            name: ex?.n || id,
+            type: ex?.type || 'reps',
+            m: ex?.m || null,
+            eq: ex?.eq || null,
+            restSec: ex?.rest ?? null,
+            sup: supIndexOf(routine, id),
+            sets,
+            ...(note ? { note } : {}),
           }
         })
         set({ active: { id: uid(), d: today(), name, rid, start: Date.now(), entries } })
@@ -78,16 +95,27 @@ export const useStore = create(
       addEntry(exId, cfg = null, routine = null) {
         const a = get().active
         if (!a || a.entries.some(e => e.exId === exId)) return false
-        const ex = get().allEx().find(e => e.id === exId)
+        const ex = get()
+          .allEx()
+          .find(e => e.id === exId)
         const { sets, note } = get().buildSets(exId, cfg)
         set({
           active: {
             ...a,
-            entries: [...a.entries, {
-              exId, name: ex?.n || exId, type: ex?.type || 'reps', m: ex?.m || null, eq: ex?.eq || null,
-              restSec: ex?.rest ?? null, sup: supIndexOf(routine, exId),
-              sets, ...(note ? { note } : {}),
-            }],
+            entries: [
+              ...a.entries,
+              {
+                exId,
+                name: ex?.n || exId,
+                type: ex?.type || 'reps',
+                m: ex?.m || null,
+                eq: ex?.eq || null,
+                restSec: ex?.rest ?? null,
+                sup: supIndexOf(routine, exId),
+                sets,
+                ...(note ? { note } : {}),
+              },
+            ],
           },
         })
         return true
@@ -106,7 +134,10 @@ export const useStore = create(
             entries: a.entries.map(e => {
               if (e.exId !== exId) return e
               const prev = e.sets[e.sets.length - 1]
-              const s = copyPrev && prev ? { ...prev, done: false } : { reps: prev?.reps ?? 10, kg: prev?.kg ?? 0, done: false }
+              const s =
+                copyPrev && prev
+                  ? { ...prev, done: false }
+                  : { reps: prev?.reps ?? 10, kg: prev?.kg ?? 0, done: false }
               return { ...e, sets: [...e.sets, s] }
             }),
           },
@@ -139,7 +170,9 @@ export const useStore = create(
         set({
           active: {
             ...a,
-            entries: a.entries.map(e => (e.exId !== exId ? e : { ...e, sets: e.sets.filter((_, j) => j !== i) })),
+            entries: a.entries.map(e =>
+              e.exId !== exId ? e : { ...e, sets: e.sets.filter((_, j) => j !== i) }
+            ),
           },
         })
       },
@@ -186,7 +219,9 @@ export const useStore = create(
           active: {
             ...a,
             entries: a.entries.map(e =>
-              e.exId !== exId ? e : { ...e, sets: Array.from({ length: n }, () => ({ kg, reps, done: false })) }
+              e.exId !== exId
+                ? e
+                : { ...e, sets: Array.from({ length: n }, () => ({ kg, reps, done: false })) }
             ),
           },
         })
@@ -210,7 +245,9 @@ export const useStore = create(
 
       /* ---- 云同步（可选微后端，见 docs/SYNC_PUSH.md）----
        * 文档级 LWW：push 带 baseRev，409 时按「最后改动时间」新者胜。 */
-      setSync(patch) { set({ sync: { ...get().sync, ...patch } }) },
+      setSync(patch) {
+        set({ sync: { ...get().sync, ...patch } })
+      },
       adoptRemote(state, rev) {
         const cur = get()
         const clean = normalizeState({ ...state })
@@ -228,10 +265,13 @@ export const useStore = create(
         const s = get().sync
         if (!s.url || !s.token) return 'off'
         // active（进行中的训练）是设备本地的，不上云
-        const { active, sync: _s, ...doc } = get()
+        const { active: _active, sync: _s, ...doc } = get()
         const snapshot = { ...doc, _ts: Date.now() }
         const r = await pushData(s.url, s.token, s.rev, snapshot)
-        if (r.ok) { get().setSync({ rev: r.data.rev, lastSync: Date.now() }); return 'synced' }
+        if (r.ok) {
+          get().setSync({ rev: r.data.rev, lastSync: Date.now() })
+          return 'synced'
+        }
         if (r.status !== 409) return 'error'
         // 冲突：另一台设备写过。本机无未同步改动 → 直接采纳云端；
         // 双方都有改动 → 谁最后改动谁胜（文档级 LWW）。
@@ -244,7 +284,10 @@ export const useStore = create(
         }
         if ((snapshot._ts || 0) >= (server.state?._ts || 0)) {
           const f = await pushData(s.url, s.token, server.rev, snapshot)
-          if (f.ok) { get().setSync({ rev: f.data.rev, lastSync: Date.now() }); return 'overwritten' }
+          if (f.ok) {
+            get().setSync({ rev: f.data.rev, lastSync: Date.now() })
+            return 'overwritten'
+          }
         } else {
           if (server.state) get().adoptRemote(server.state, server.rev)
           return 'adopted'
@@ -253,14 +296,18 @@ export const useStore = create(
       },
 
       /* ---- 计划与模板 ---- */
-      setPlanMode(mode) { set({ plan: { ...get().plan, mode } }) },
+      setPlanMode(mode) {
+        set({ plan: { ...get().plan, mode } })
+      },
       assignDay(day, rid) {
         const week = { ...get().plan.week }
         if (rid) week[day] = rid
         else delete week[day]
         set({ plan: { ...get().plan, week } })
       },
-      setRotation(rotation) { set({ plan: { ...get().plan, rotation } }) },
+      setRotation(rotation) {
+        set({ plan: { ...get().plan, rotation } })
+      },
       updateRoutine(id, patch) {
         set({ routines: get().routines.map(r => (r.id === id ? { ...r, ...patch } : r)) })
       },
@@ -271,8 +318,12 @@ export const useStore = create(
         set({ workouts: [workout, ...workouts], active: null })
         return workout
       },
-      discardWorkout() { set({ active: null }) },
-      deleteWorkout(id) { set({ workouts: get().workouts.filter(w => w.id !== id) }) },
+      discardWorkout() {
+        set({ active: null })
+      },
+      deleteWorkout(id) {
+        set({ workouts: get().workouts.filter(w => w.id !== id) })
+      },
 
       /* ---- 数据 ---- */
       logBodyweight(kg) {
@@ -285,10 +336,27 @@ export const useStore = create(
         set({ customEx: [ex, ...get().customEx] })
         return ex
       },
-      setSettings(patch) { set({ settings: { ...get().settings, ...patch } }) },
+      setSettings(patch) {
+        set({ settings: { ...get().settings, ...patch } })
+      },
       exportState() {
         const { settings, customEx, routines, plan, workouts, bodyweight, active } = get()
-        return JSON.stringify({ app: 'gym-gym', version: 2, exportedAt: new Date().toISOString(), settings, customEx, routines, plan, workouts, bodyweight, active }, null, 2)
+        return JSON.stringify(
+          {
+            app: 'gym-gym',
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            settings,
+            customEx,
+            routines,
+            plan,
+            workouts,
+            bodyweight,
+            active,
+          },
+          null,
+          2
+        )
       },
       importState(json) {
         const d = JSON.parse(json)
@@ -297,8 +365,16 @@ export const useStore = create(
         set({
           settings: { ...get().settings, ...d.settings },
           customEx: clean.customEx,
-          routines: (clean.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
-          plan: d.plan || { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
+          routines: (clean.routines || PRESET_ROUTINES).map(r => ({
+            cfg: DEFAULT_CFG(),
+            supersets: [],
+            ...r,
+          })),
+          plan: d.plan || {
+            mode: 'week',
+            week: { 1: 'push', 3: 'pull', 5: 'legs' },
+            rotation: ['push', 'pull', 'legs'],
+          },
           workouts: clean.workouts,
           bodyweight: clean.bodyweight,
           active: d.active || null,
@@ -307,14 +383,23 @@ export const useStore = create(
       resetAll() {
         set({
           settings: { restSec: 90, sound: true, vibrate: true },
-          customEx: [], routines: PRESET_ROUTINES,
-          plan: { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
-          workouts: [], bodyweight: [], active: null,
+          customEx: [],
+          routines: PRESET_ROUTINES,
+          plan: {
+            mode: 'week',
+            week: { 1: 'push', 3: 'pull', 5: 'legs' },
+            rotation: ['push', 'pull', 'legs'],
+          },
+          workouts: [],
+          bodyweight: [],
+          active: null,
         })
       },
 
       /* ---- 派生 ---- */
-      allEx() { return [...EXERCISES, ...get().customEx] },
+      allEx() {
+        return [...EXERCISES, ...get().customEx]
+      },
     }),
     {
       name: 'gym_gym_v1',
@@ -324,7 +409,11 @@ export const useStore = create(
        * v4：加云同步配置。 */
       migrate: (p, ver) => {
         if (ver < 2) {
-          p.plan = p.plan || { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] }
+          p.plan = p.plan || {
+            mode: 'week',
+            week: { 1: 'push', 3: 'pull', 5: 'legs' },
+            rotation: ['push', 'pull', 'legs'],
+          }
           p.routines = (p.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r }))
         }
         if (ver < 4) p.sync = p.sync || { url: '', token: '', uid: '', rev: 0, lastSync: 0 }
@@ -337,15 +426,23 @@ export const useStore = create(
         if (state?.sync?.url && state?.sync?.token) state.syncNow?.()
       },
       partialize: s => ({
-        settings: s.settings, customEx: s.customEx, routines: s.routines, plan: s.plan, sync: s.sync,
-        workouts: s.workouts, bodyweight: s.bodyweight, active: s.active,
+        settings: s.settings,
+        customEx: s.customEx,
+        routines: s.routines,
+        plan: s.plan,
+        sync: s.sync,
+        workouts: s.workouts,
+        bodyweight: s.bodyweight,
+        active: s.active,
       }),
     }
   )
 )
 
 /* 任意数据改动 → 记录时间；已配置云同步时：每 60s 推一次欠账、回前台推一次 */
-useStore.subscribe(() => { lastChangeAt = Date.now() })
+useStore.subscribe(() => {
+  lastChangeAt = Date.now()
+})
 setInterval(() => {
   const s = useStore.getState()
   if (s.sync.url && s.sync.token && lastChangeAt > s.sync.lastSync) s.syncNow()

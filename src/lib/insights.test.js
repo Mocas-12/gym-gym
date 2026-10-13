@@ -4,18 +4,21 @@ import { e1rmSeries, heatmap, muscleLoad, recoveryStatus, trainedExercises } fro
 const NOW = new Date('2026-10-12T12:00:00').getTime()
 const DAY = 86400000
 const mk = (daysAgo, entries, volume = 0) => ({
-  id: 'w' + daysAgo, start: NOW - daysAgo * DAY, end: NOW, volume,
+  id: 'w' + daysAgo,
+  start: NOW - daysAgo * DAY,
+  end: NOW,
+  volume,
   entries,
 })
 
 describe('e1rmSeries', () => {
   it('按天聚合取最高、时间升序', () => {
     const ws = [
-      mk(0, [{ exId: 'bench', sets: [{ kg: 80, reps: 3, done: true }] }]),          // 88
-      mk(1, [{ exId: 'bench', sets: [{ kg: 82.5, reps: 3, done: true }] }]),        // 90.75
-      mk(1, [{ exId: 'bench', sets: [{ kg: 85, reps: 2, done: true }] }]),          // 同天 90.67，取更高 90.75
-      mk(2, [{ exId: 'bench', sets: [{ kg: 0, reps: 10, done: true }] }]),          // 零重量跳过
-      mk(2, [{ exId: 'row', sets: [{ kg: 40, reps: 8, done: true }] }]),            // 别的动作
+      mk(0, [{ exId: 'bench', sets: [{ kg: 80, reps: 3, done: true }] }]), // 88
+      mk(1, [{ exId: 'bench', sets: [{ kg: 82.5, reps: 3, done: true }] }]), // 90.75
+      mk(1, [{ exId: 'bench', sets: [{ kg: 85, reps: 2, done: true }] }]), // 同天 90.67，取更高 90.75
+      mk(2, [{ exId: 'bench', sets: [{ kg: 0, reps: 10, done: true }] }]), // 零重量跳过
+      mk(2, [{ exId: 'row', sets: [{ kg: 40, reps: 8, done: true }] }]), // 别的动作
     ]
     const s = e1rmSeries(ws, 'bench')
     expect(s).toHaveLength(2)
@@ -38,11 +41,13 @@ describe('heatmap', () => {
 
 describe('muscleLoad / recoveryStatus', () => {
   it('按肌群聚合完成组数与距上次小时数，跳过未知肌群', () => {
-    const ws = [mk(1, [
-      { exId: 'squat', m: '腿', sets: [{ done: true }, { done: true }, { done: false }] },
-      { exId: 'curl', m: '手臂', sets: [{ done: true }] },
-      { exId: 'custom-x', sets: [{ done: true }] }, // 无 m → 跳过
-    ])]
+    const ws = [
+      mk(1, [
+        { exId: 'squat', m: '腿', sets: [{ done: true }, { done: true }, { done: false }] },
+        { exId: 'curl', m: '手臂', sets: [{ done: true }] },
+        { exId: 'custom-x', sets: [{ done: true }] }, // 无 m → 跳过
+      ]),
+    ]
     const ml = muscleLoad(ws, 7, NOW)
     expect(ml.find(x => x.m === '腿')).toMatchObject({ sets: 2 })
     expect(ml.find(x => x.m === '手臂')).toMatchObject({ sets: 1 })
@@ -50,10 +55,13 @@ describe('muscleLoad / recoveryStatus', () => {
     expect(ml[0].hoursAgo).toBe(24)
   })
   it('恢复状态：大肌群 72h、小时数越接近阈值恢复越少', () => {
-    const r = recoveryStatus([
-      { m: '腿', sets: 5, hoursAgo: 24 },
-      { m: '核心', sets: 3, hoursAgo: 30 },
-    ], NOW)
+    const r = recoveryStatus(
+      [
+        { m: '腿', sets: 5, hoursAgo: 24 },
+        { m: '核心', sets: 3, hoursAgo: 30 },
+      ],
+      NOW
+    )
     expect(r[0]).toMatchObject({ recovered: false, pct: 33 })
     expect(r[1]).toMatchObject({ recovered: true, pct: 100 })
   })
