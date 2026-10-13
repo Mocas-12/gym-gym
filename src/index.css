@@ -38,6 +38,7 @@ body {
 .page { padding: calc(14px + var(--safe-t)) 16px calc(24px + var(--safe-b)); max-width: 560px; margin: 0 auto; }
 /* 标签栏是布局内的常驻底栏（不用 fixed：iOS 上 fixed+bottom 首帧会错位脱离底边） */
 .tabbar {
+  position: relative; z-index: 70; /* 永远浮在抽屉遮罩(z-60)之上：编辑器打开也能直接切菜单 */
   flex-shrink: 0;
   display: flex; justify-content: space-around;
   padding: 6px 8px calc(6px + var(--safe-b));
