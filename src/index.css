@@ -169,7 +169,11 @@ button.card { cursor: pointer; display: block; }
   animation: up 0.22s ease-out;
 }
 @keyframes up { from { transform: translateY(40px); opacity: 0.6; } }
-.sheet-head { padding: 14px 16px 10px; display: flex; gap: 8px; border-bottom: 1px solid var(--line); }
+.sheet-head {
+  padding: 14px 16px 10px; display: flex; gap: 8px; align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.sheet { transition: transform 0.2s ease-out; }
 .sheet-body { overflow-y: auto; padding: 6px 16px 18px; }
 .group-title { font-size: 13px; color: var(--dim); margin: 14px 2px 6px; font-weight: 700; }
 .pick {

@@ -50,9 +50,9 @@ export default function WorkoutView() {
   }
 
   const onPick = ex => {
-    if (ex) {
-      if (!addEntry(ex.id)) toast('这个动作已经在训练里了')
-    } else setPicking(false)
+    // 受控切换：已选 = 移除，未选 = 添加
+    if (active.entries.some(e => e.exId === ex.id)) removeEntry(ex.id)
+    else if (!addEntry(ex.id)) toast('这个动作已经在训练里了')
   }
 
   const done = (en, i) => {
@@ -143,7 +143,13 @@ export default function WorkoutView() {
       })}
 
       <button className="btn ghost block" onClick={() => setPicking(true)}>＋ 添加动作</button>
-      {picking && <ExercisePicker onAdd={onPick} />}
+      {picking && (
+        <ExercisePicker
+          selected={active.entries.map(e => e.exId)}
+          onToggle={onPick}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </div>
   )
 }

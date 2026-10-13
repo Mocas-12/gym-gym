@@ -36,9 +36,8 @@ export default function WorkoutEdit({ workout, onClose }) {
     ...e,
     sets: Array.from({ length: n }, () => ({ kg, reps, done: true })),
   }))
-  /* 切换式添加：已在列表里再点一次 = 移除；函数式更新防止快速连点的闭包叠加 */
-  const addEx = ex => {
-    if (!ex) { setPicking(false); return }
+  /* 切换式：已在列表里再点一次 = 移除；函数式更新防止快速连点的闭包叠加 */
+  const toggleEx = ex => {
     setEntries(prev => {
       if (prev.some(e => e.exId === ex.id)) return prev.filter(e => e.exId !== ex.id)
       const blank = ex.type === 'cardio' ? { min: null, speed: null, incl: null, done: true }
@@ -115,7 +114,13 @@ export default function WorkoutEdit({ workout, onClose }) {
           </div>
         </div>
       </div>
-      {picking && <ExercisePicker onAdd={addEx} />}
+      {picking && (
+        <ExercisePicker
+          selected={entries.map(e => e.exId)}
+          onToggle={toggleEx}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </div>
   )
 }

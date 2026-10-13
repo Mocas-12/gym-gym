@@ -39,10 +39,9 @@ export default function RoutineEdit({ id, onClose }) {
     setJoins(jb)
   }
   const remove = i => { setExIds(exIds.filter((_, k) => k !== i)); setJoins(joins.filter((_, k) => k !== i)) }
-  const onPick = ex => {
-    if (!ex) { setPicking(false); return }
-    setExIds(prev => (prev.includes(ex.id) ? prev : [...prev, ex.id]))
-    setJoins(prev => (exIds.includes(ex.id) ? prev : [...prev, false]))
+  const toggleEx = ex => {
+    setExIds(prev => (prev.includes(ex.id) ? prev.filter(x => x !== ex.id) : [...prev, ex.id]))
+    setJoins(prev => (exIds.includes(ex.id) ? prev.filter((_, k) => k !== exIds.indexOf(ex.id)) : [...prev, false]))
   }
   const save = () => {
     updateRoutine(id, { name: name.trim() || routine.name, exIds, supersets: groups.filter(g => g.length > 1), cfg })
@@ -126,7 +125,13 @@ export default function RoutineEdit({ id, onClose }) {
           </div>
         </div>
       </div>
-      {picking && <ExercisePicker onAdd={onPick} />}
+      {picking && (
+        <ExercisePicker
+          selected={exIds}
+          onToggle={toggleEx}
+          onClose={() => setPicking(false)}
+        />
+      )}
     </div>
   )
 }

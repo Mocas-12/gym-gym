@@ -1,18 +1,18 @@
-import { useMemo, useState } from 'react'
+/* 动作选择器（受控组件）：选中态由父组件传入，点按 = 切换（选中/取消）。
+ * Portal 渲染到 body（不被抽屉遮挡）；键盘弹出时整体上移避让。 */
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { MUSCLES, EQUIPMENT } from '../data/exercises.js'
 
-/* 底部抽屉：器械筛选 + 按肌群分组 + 搜索，多点几个连续加动作。 */
-export default function ExercisePicker({ onAdd }) {
+export default function ExercisePicker({ selected = [], onToggle, onClose }) {
   const allEx = useStore(s => s.allEx)
   const custom = useStore(s => s.customEx)
   const addCustomEx = useStore(s => s.addCustomEx)
   const toast = useUI(s => s.toast)
   const [q, setQ] = useState('')
   const [eq, setEq] = useState(null)
-  const [added, setAdded] = useState([])
   const list = allEx()
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -25,21 +25,33 @@ export default function ExercisePicker({ onAdd }) {
     })).filter(g => g.items.length)
   }, [q, eq, list, custom])
 
-  const add = ex => {
-    if (onAdd(ex) !== false) setAdded(a => [...a, ex.n])
-  }
+  /* 键盘避让：visualViewport 缩小时把整个抽屉上移同样高度 */
+  const [kb, setKb] = useState(0)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const on = () => setKb(Math.max(0, window.innerHeight - vv.height - vv.offsetTop))
+    vv.addEventListener('resize', on)
+    vv.addEventListener('scroll', on)
+    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on) }
+  }, [])
+
   const addCustom = () => {
     const n = q.trim()
     if (!n) return
-    addCustomEx({ n })
+    const ex = addCustomEx({ n })
     toast(`已创建自定义练习「${n}」`)
     setQ('')
+    onToggle(ex)
   }
 
-  // Portal 渲染到 body：嵌在编辑抽屉里时也不会被父层遮挡/裁剪
   return createPortal(
-    <div className="sheet-mask" onClick={() => onAdd(null, added)}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
+    <div className="sheet-mask" onClick={onClose}>
+      <div
+        className="sheet"
+        style={kb > 80 ? { transform: `translateY(-${kb}px)` } : undefined}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="sheet-head">
           <input
             className="input grow"
@@ -49,7 +61,8 @@ export default function ExercisePicker({ onAdd }) {
             onChange={e => setQ(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && q.trim() && !shown.some(g => g.items.length)) addCustom() }}
           />
-          <button className="btn primary" onClick={() => onAdd(null, added)}>完成{added.length ? `(${added.length})` : ''}</button>
+          <button className="icon-btn" title="关闭" onClick={onClose}>✕</button>
+          <button className="btn primary" onClick={onClose}>完成{selected.length ? `(${selected.length})` : ''}</button>
         </div>
         <div className="eq-filter">
           <button className={'chip sm' + (eq === null ? ' on' : '')} onClick={() => setEq(null)}>全部</button>
@@ -65,9 +78,9 @@ export default function ExercisePicker({ onAdd }) {
             <div key={g.m}>
               <div className="group-title">{g.m}</div>
               {g.items.map(ex => (
-                <button key={ex.id} className={'pick' + (added.includes(ex.n) ? ' picked' : '')} onClick={() => add(ex)}>
+                <button key={ex.id} className={'pick' + (selected.includes(ex.id) ? ' picked' : '')} onClick={() => onToggle(ex)}>
                   <span>{ex.n}</span>
-                  <span className="pick-eq">{ex.eq}</span>
+                  <span className="pick-eq">{selected.includes(ex.id) ? '✓ 已选' : ex.eq}</span>
                 </button>
               ))}
             </div>
