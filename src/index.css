@@ -173,8 +173,14 @@ button.card { cursor: pointer; display: block; }
   padding: 14px 16px 10px; display: flex; gap: 8px; align-items: center;
   border-bottom: 1px solid var(--line);
 }
-.sheet { transition: transform 0.2s ease-out; }
-.sheet-body { overflow-y: auto; padding: 6px 16px 18px; }
+.sheet { border-radius: 22px 22px 0 0; }
+.sheet-body { overflow-y: auto; padding: 6px 16px 18px; overscroll-behavior: contain; }
+/* 键盘避让：聚焦输入后抽屉改为顶部锚定，键盘只可能盖住列表底部 */
+.sheet-mask.kb-top { align-items: flex-start; }
+.sheet-mask.kb-top .sheet {
+  max-height: calc(100dvh - var(--safe-t) - 16px);
+  margin-top: calc(var(--safe-t) + 8px);
+}
 .group-title { font-size: 13px; color: var(--dim); margin: 14px 2px 6px; font-weight: 700; }
 .pick {
   display: flex; justify-content: space-between; align-items: center; width: 100%;

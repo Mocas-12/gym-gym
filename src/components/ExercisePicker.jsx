@@ -25,15 +25,14 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
     })).filter(g => g.items.length)
   }, [q, eq, list, custom])
 
-  /* 键盘避让：visualViewport 缩小时把整个抽屉上移同样高度 */
-  const [kb, setKb] = useState(0)
+  /* 键盘避让：一旦聚焦输入，抽屉切换为顶部锚定（离散状态切换，不做连续位移——
+   * 连续 translate 会和 iOS 橡皮筋滚动互相打架导致卡死），直到选择器关闭 */
+  const [topMode, setTopMode] = useState(false)
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const on = () => setKb(Math.max(0, window.innerHeight - vv.height - vv.offsetTop))
-    vv.addEventListener('resize', on)
-    vv.addEventListener('scroll', on)
-    return () => { vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on) }
+    const on = e => { if (e.target.closest('input')) setTopMode(true) }
+    const el = document.body
+    el.addEventListener('focusin', on)
+    return () => el.removeEventListener('focusin', on)
   }, [])
 
   const addCustom = () => {
@@ -46,10 +45,9 @@ export default function ExercisePicker({ selected = [], onToggle, onClose }) {
   }
 
   return createPortal(
-    <div className="sheet-mask" onClick={onClose}>
+    <div className={'sheet-mask' + (topMode ? ' kb-top' : '')} onClick={onClose}>
       <div
         className="sheet"
-        style={kb > 80 ? { transform: `translateY(-${kb}px)` } : undefined}
         onClick={e => e.stopPropagation()}
       >
         <div className="sheet-head">
