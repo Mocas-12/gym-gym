@@ -5,3 +5,4 @@ dist/
 .mimosa/
 .wrangler/
 backend/.worker-under-test.mjs
+coverage/
