@@ -4,7 +4,7 @@
       "startServerCommand": "npm run preview -- --port 4174 --strictPort",
       "startServerReadyPattern": "Local",
       "url": ["http://localhost:4174/"],
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "settings": {
         "skipAudits": ["uses-http2", "canonical", "robots-txt"],
         "note": "robots-txt/canonical 对 GitHub Pages 项目页（/gym-gym/ 子路径）不可控，跳过"
