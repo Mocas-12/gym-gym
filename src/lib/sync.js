@@ -59,10 +59,6 @@ export const pushPublicKey = (url, token) =>
 export const subscribePush = (url, token, subscription) =>
   jsonFetch(url.replace(/\/$/, '') + '/api/push/subscribe', { method: 'POST', token, body: subscription })
 
-/** @param {string} url @param {string} token @param {string} endpoint @returns {Promise<ApiResponse<{ ok?: boolean }>>} */
-export const unsubscribePush = (url, token, endpoint) =>
-  jsonFetch(url.replace(/\/$/, '') + '/api/push/unsubscribe', { method: 'POST', token, body: { endpoint } })
-
 /** @param {string} url @param {string} token @returns {Promise<ApiResponse<{ sent?: number, total?: number }>>} */
 export const testPush = (url, token) =>
   jsonFetch(url.replace(/\/$/, '') + '/api/push/test', { method: 'POST', token })

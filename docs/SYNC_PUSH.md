@@ -445,6 +445,7 @@ const handler = {
       if (route === 'POST /api/push/rest') {
         const { sec, label } = await request.json()
         const id = hex(6)
+        pendingRest.add(id)
         const payload = JSON.stringify({ title: 'GymGym · 休息结束', body: label || '下一组', restId: id, tag: 'rest' })
         ctx.waitUntil(
           (async () => {

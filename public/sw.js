@@ -32,7 +32,7 @@ self.addEventListener('install', e =>
         console.log('[SW-INSTALL] 失败', e.message)
         try {
           const c = await caches.open(CACHE)
-          await c.put('__install_debug__', JSON.stringify({ fatal: e.message }))
+          await c.put('__install_debug__', new Response(JSON.stringify({ fatal: e.message })))
         } catch {}
       }
     })()

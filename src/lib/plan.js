@@ -1,7 +1,6 @@
 /* 周计划：week 模式按星期几排课；rotation 模式按顺序轮换（下一个=上一次做的下一个）。
  * week 的键是 JS getDay()：0=周日 … 6=周六。 */
 // @ts-check
-import { todayISO } from './plan-util.js'
 
 /**
  * 计划文档：week 模式（星期→模板 id）或 rotation 模式（模板 id 轮换）。
@@ -65,5 +64,3 @@ export function nextAssigned(plan, workouts, from = new Date()) {
 export const WEEKDAY_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 /** 计划页显示顺序：周一开始 @type {number[]} */
 export const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]
-
-export { todayISO }

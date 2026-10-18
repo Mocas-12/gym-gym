@@ -43,7 +43,8 @@ export const useUI = create((set, get) => ({
     set({ restUntil: Math.max(get().restUntil, Date.now()) + sec * 1000 })
   },
   stopRest() {
-    const { sync, restPushId } = useStore.getState()
+    const { sync } = useStore.getState()
+    const { restPushId } = get()
     if (restPushId) restPushCancel(sync.url, sync.token, restPushId)
     set({ restUntil: 0, restLabel: '', restPushId: null })
   },
