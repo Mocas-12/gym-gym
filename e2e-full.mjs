@@ -1,6 +1,7 @@
 /* 全功能端到端矩阵：四大页面全部功能 + 脏数据健壮性 + 多机型。
  * 运行：npm run build && npm run preview & ；node e2e-full.mjs */
 import { chromium, webkit } from 'playwright'
+import { readFile } from 'node:fs/promises'
 
 const BASE = process.env.E2E_URL || 'http://localhost:8930'
 const browser = await (process.env.E2E_BROWSER === 'webkit'
@@ -14,12 +15,14 @@ const check = (name, ok, detail = '') => {
 }
 const errors = []
 
-async function fresh(seed) {
-  const page = await browser.newPage({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
-  })
+async function fresh(seed, context) {
+  const page = context
+    ? await context.newPage()
+    : await browser.newPage({
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      })
   page.setDefaultTimeout(15000)
   page.on('pageerror', e => errors.push('[pageerror] ' + e.message))
   page.on('console', m => {
@@ -430,7 +433,10 @@ for (const [w, h, name] of [
         const r = indexedDB.open('gym-gym-recovery', 1)
         r.onsuccess = () => {
           const db = r.result
-          const read = db.transaction('backups').objectStore('backups').get('latest')
+          const read = db
+            .transaction('backups')
+            .objectStore('backups')
+            .get(state.recovery.id || 'latest')
           read.onsuccess = () => {
             db.close()
             resolve(read.result)
@@ -514,6 +520,162 @@ for (const [w, h, name] of [
   check(
     'H13 训练中显示上次同动作正式组对比',
     await p.locator('[data-testid="training-comparison"]').first().isVisible()
+  )
+  await p.close()
+}
+
+/* ============ I. 数据写入边界回归 ============ */
+{
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  })
+  const a = await fresh({}, context)
+  const b = await context.newPage()
+  b.setDefaultTimeout(15000)
+  b.on('pageerror', error => errors.push('[second page] ' + error.message))
+  await b.goto(BASE + '/', { waitUntil: 'domcontentloaded' })
+  await b.getByRole('status').waitFor()
+  await a.locator('form input').fill('72')
+  await a.getByRole('button', { name: '记录', exact: true }).click()
+  check(
+    'I1 第二页面等待写锁，不能用旧状态覆盖第一页面',
+    (await b.locator('.tabbar').count()) === 0 &&
+      (await b.evaluate(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight[0].kg === 72))
+  )
+  await a.close()
+  await b.locator('.tabbar').waitFor()
+  await b.locator('.tabbar').getByText('设置', { exact: true }).click()
+  await b.getByRole('button', { name: '120s', exact: true }).click()
+  check(
+    'I2 取得写锁后先读取最新记录，再修改设置',
+    await b.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+      return s.bodyweight[0].kg === 72 && s.settings.restSec === 120
+    })
+  )
+  await context.close()
+}
+{
+  const p = await fresh({})
+  await p.evaluate(() => {
+    const original = Storage.prototype.setItem
+    window.restoreWrites = () => {
+      Storage.prototype.setItem = original
+    }
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'gym_gym_v1') throw new DOMException('quota', 'QuotaExceededError')
+      return original.call(this, key, value)
+    }
+  })
+  await p.locator('form input').fill('74')
+  await p.getByRole('button', { name: '记录', exact: true }).click()
+  await p.getByRole('alert').waitFor()
+  check(
+    'I3 保存失败持续提示未保存，磁盘仍保留原数据',
+    (await p.getByText('尚未保存', { exact: true }).isVisible()) &&
+      (await p.evaluate(
+        () => (JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight || []).length === 0
+      ))
+  )
+  const [download] = await Promise.all([
+    p.waitForEvent('download'),
+    p.getByRole('button', { name: '导出未保存内容' }).click(),
+  ])
+  const draft = JSON.parse(await readFile(await download.path(), 'utf8'))
+  check('I4 未保存内容能导出完整可导入备份', draft.app === 'gym-gym' && draft.bodyweight[0].kg === 74)
+  await p.evaluate(() => window.restoreWrites())
+  await p.getByRole('button', { name: '重试保存' }).click()
+  await p.getByRole('alert').waitFor({ state: 'hidden' })
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.locator('.tabbar').waitFor()
+  check(
+    'I5 重试成功后刷新仍保留新数据',
+    await p.evaluate(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight[0].kg === 74)
+  )
+  await p.close()
+}
+{
+  const day = new Date()
+  day.setHours(7, 12, 34, 567)
+  const start = +day,
+    end = start + 300000
+  const p = await fresh({
+    workouts: [
+      {
+        id: 'short',
+        start,
+        end,
+        name: '五分钟训练',
+        entries: [{ exId: 'bench', name: '卧推', sets: [{ kg: 60, reps: 8, done: true }] }],
+      },
+    ],
+  })
+  await p.locator('.tabbar').getByText('历史', { exact: true }).click()
+  await p.locator('.card-open').first().click()
+  await p.getByRole('button', { name: '编辑', exact: true }).click()
+  await p.locator('.sheet-head input').fill('只修改名称')
+  await p.locator('.sheet .btn.primary:has-text("保存")').first().click()
+  await p.locator('.sheet').waitFor({ state: 'hidden' })
+  check(
+    'I6 改名保留精确起止时间和五分钟时长',
+    await p.evaluate(
+      ({ start, end }) => {
+        const w = JSON.parse(localStorage.getItem('gym_gym_v1')).state.workouts[0]
+        return w.name === '只修改名称' && w.start === start && w.end === end
+      },
+      { start, end }
+    )
+  )
+  await p.close()
+}
+{
+  const p = await fresh({
+    active: {
+      id: 'blank',
+      name: '空组',
+      start: Date.now(),
+      entries: [{ exId: 'plank', type: 'time', name: '平板支撑', sets: [{ sec: null, done: false }] }],
+    },
+  })
+  await p.locator('.tabbar').getByText('训练', { exact: true }).click()
+  await p.locator('.done-btn').first().click()
+  await p.getByText(/请先填写有效/).waitFor()
+  check('I7 空数值组不能勾选，界面给出输入提示', (await p.locator('.done-btn.on').count()) === 0)
+  await p.close()
+}
+{
+  const p = await fresh({
+    recovery: { reason: '旧版本删除', at: Date.now() },
+    bodyweight: [{ d: '2026-10-21', kg: 72 }],
+  })
+  await p.evaluate(async () => {
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open('gym-gym-recovery', 1)
+      request.onupgradeneeded = () => request.result.createObjectStore('backups')
+      request.onsuccess = () => {
+        const db = request.result,
+          tx = db.transaction('backups', 'readwrite')
+        tx.objectStore('backups').put(
+          { json: JSON.stringify({ app: 'gym-gym', bodyweight: [{ d: '2026-10-20', kg: 80 }] }) },
+          'latest'
+        )
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onabort = reject
+      }
+      request.onerror = reject
+    })
+  })
+  await p.locator('.tabbar').getByText('设置', { exact: true }).click()
+  await p.getByRole('button', { name: '恢复上次数据', exact: true }).click()
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight[0].kg === 80)
+  check(
+    'I8 旧版本 latest 恢复点兼容，恢复后改用独立 ID',
+    await p.evaluate(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.recovery.id)
   )
   await p.close()
 }

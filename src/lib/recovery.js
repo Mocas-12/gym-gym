@@ -10,25 +10,43 @@ function database() {
 
 export async function writeRecovery(value) {
   const db = await database()
+  const id = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map(n => n.toString(16).padStart(2, '0'))
+    .join('')
   try {
     await new Promise((resolve, reject) => {
       const tx = db.transaction('backups', 'readwrite')
-      tx.objectStore('backups').put(value, 'latest')
+      tx.objectStore('backups').put(value, id)
       tx.oncomplete = resolve
       tx.onabort = tx.onerror = () => reject(new Error('恢复点保存失败，原数据已保留'))
+    })
+    return id
+  } finally {
+    db.close()
+  }
+}
+
+export async function readRecovery(id = 'latest') {
+  const db = await database()
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction('backups').objectStore('backups').get(id)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(new Error('无法读取恢复点'))
     })
   } finally {
     db.close()
   }
 }
 
-export async function readRecovery() {
+export async function deleteRecovery(id) {
   const db = await database()
   try {
-    return await new Promise((resolve, reject) => {
-      const request = db.transaction('backups').objectStore('backups').get('latest')
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(new Error('无法读取恢复点'))
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('backups', 'readwrite')
+      tx.objectStore('backups').delete(id)
+      tx.oncomplete = resolve
+      tx.onabort = tx.onerror = reject
     })
   } finally {
     db.close()

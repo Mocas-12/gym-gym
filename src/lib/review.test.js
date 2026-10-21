@@ -1,6 +1,18 @@
 import { expect, it } from 'vitest'
 import { compareEntry, entrySummary, weeklyReview } from './review.js'
 
+it('未净化的空数值记录也不会增加周回顾训练次数和正式组数', () => {
+  const start = +new Date('2026-10-21T10:00:00')
+  const history = [
+    { start, entries: [{ exId: 'a', sets: [{ kg: null, reps: null, done: true }] }] },
+    { start, entries: [{ exId: 'b', sets: [{ kg: 0, reps: 8, done: true }] }] },
+  ]
+  expect(weeklyReview(history, new Date('2026-10-21T12:00:00')).current).toMatchObject({
+    sessions: 1,
+    sets: 1,
+  })
+})
+
 const entry = (type, sets) => ({ exId: 'x', type, sets })
 it('力量、计时、有氧按各自单位比较，排除热身与未完成组', () => {
   const sets = [

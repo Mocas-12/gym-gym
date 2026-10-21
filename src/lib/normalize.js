@@ -7,6 +7,7 @@
  * 且下一次 persist 会把干净数据写回存储，实现存储自愈。
  */
 // @ts-check
+import { boundedSetCount } from './sets.js'
 import { rebuildStats } from './workout.js'
 import { DEFAULT_CFG, SCHEMES } from './progression.js'
 
@@ -23,6 +24,10 @@ function cleanWorkout(workout) {
       .filter((/** @type {any} */ e) => object(e) && typeof e.exId === 'string' && e.exId)
       .map((/** @type {any} */ e) => ({
         ...e,
+        plannedSets: boundedSetCount(
+          e.plannedSets,
+          (Array.isArray(e.sets) ? e.sets : []).filter((/** @type {any} */ s) => s && !s.w).length
+        ),
         ...(e.name != null && typeof e.name !== 'string' ? { name: e.exId } : {}),
         ...(e.note != null && typeof e.note !== 'string' ? { note: '' } : {}),
         sets: (Array.isArray(e.sets) ? e.sets : []).filter(object).map((/** @type {any} */ s) => {

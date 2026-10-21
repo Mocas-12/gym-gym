@@ -90,7 +90,13 @@ export default function WorkoutView() {
   }
 
   const done = (en, i) => {
-    const rest = toggleDone(en.exId, i)
+    let rest
+    try {
+      rest = toggleDone(en.exId, i)
+    } catch (err) {
+      toast(err.message)
+      return
+    }
     if (rest > 0) {
       const partner = supPartner(en)
       const label = partner ? `↔ 接着做 ${partner}` : en.type === 'time' ? en.name : `${en.name} · 下一组`

@@ -132,7 +132,7 @@ describe('同步端点', () => {
         body: {
           baseRev: 0,
           state: {
-            workouts: [{ id: 1, entries: [{ exId: 'a', sets: [{ done: true }] }] }],
+            workouts: [{ id: 1, entries: [{ exId: 'a', sets: [{ kg: 60, reps: 8, done: true }] }] }],
             settings: { restSec: 75 },
           },
         },
@@ -158,7 +158,14 @@ describe('同步端点', () => {
         token: TOKEN,
         body: {
           baseRev: 1,
-          state: { workouts: [null, { id: 'x' }, { id: 'ok', entries: [{ exId: 'a', sets: [] }] }] },
+          state: {
+            workouts: [
+              null,
+              { id: 'x' },
+              { id: 'blank', entries: [{ exId: 'a', sets: [{ done: true }] }] },
+              { id: 'ok', entries: [{ exId: 'a', sets: [{ kg: 0, reps: 8, done: true }] }] },
+            ],
+          },
         },
       })
     )
