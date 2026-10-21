@@ -1,8 +1,13 @@
-/* 短暂 UI 状态：休息倒计时、toast。不持久化。 */
+/* 休息截止时间持久化，toast 只保留在当前页面。 */
 import { create } from 'zustand'
 import { useStore } from './useStore.js'
 import { restPush, restPushCancel } from '../lib/sync.js'
 
+let savedRest = {}
+try {
+  const value = JSON.parse(localStorage.getItem('gym-gym-rest') || '{}')
+  if (value && typeof value === 'object') savedRest = value
+} catch {}
 let audioCtx = null
 function beep(times = 3) {
   try {
@@ -25,10 +30,10 @@ function beep(times = 3) {
 }
 
 export const useUI = create((set, get) => ({
-  restUntil: 0,
-  restLabel: '',
+  restUntil: Number.isFinite(savedRest.restUntil) ? savedRest.restUntil : 0,
+  restLabel: typeof savedRest.restLabel === 'string' ? savedRest.restLabel : '',
   toastMsg: '',
-  restPushId: null,
+  restPushId: savedRest.restPushId || null,
   restGeneration: 0,
   startRest(sec, label = '') {
     get().stopRest()
@@ -66,3 +71,28 @@ export const useUI = create((set, get) => ({
     useUI._tm = setTimeout(() => set({ toastMsg: '' }), 2600)
   },
 }))
+
+useUI.subscribe((state, prev) => {
+  if (state.restUntil === prev.restUntil && state.restPushId === prev.restPushId) return
+  try {
+    localStorage.setItem(
+      'gym-gym-rest',
+      JSON.stringify({ restUntil: state.restUntil, restLabel: state.restLabel, restPushId: state.restPushId })
+    )
+  } catch {
+    /* 计时仍在当前页面继续 */
+  }
+})
+// 只有确实接管了这个计时的可见页面才允许 SW 静默通知。
+if (typeof navigator !== 'undefined')
+  navigator.serviceWorker?.addEventListener('message', event => {
+    if (event.data?.type !== 'rest-notification') return
+    const state = useUI.getState()
+    const handled =
+      document.visibilityState === 'visible' && state.restUntil > 0 && state.restPushId === event.data.restId
+    if (handled) {
+      state.finishRest()
+      state.toast('休息结束，准备下一组')
+    }
+    event.ports?.[0]?.postMessage({ handled })
+  })

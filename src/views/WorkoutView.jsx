@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { compareEntry } from '../lib/review.js'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import ExercisePicker from '../components/ExercisePicker.jsx'
@@ -13,7 +14,7 @@ const fmtElapsed = ms => {
 const REST_OPTS = [45, 60, 90, 120, 150, 180]
 
 export default function WorkoutView() {
-  const { active, settings } = useStore()
+  const { active, settings, workouts } = useStore()
   const {
     addEntry,
     removeEntry,
@@ -149,6 +150,7 @@ export default function WorkoutView() {
 
       {active.entries.map(en => {
         const partner = supPartner(en)
+        const comparison = compareEntry(en, workouts, active.start)
         return (
           <div key={en.exId} className={'card entry' + (en.sup != null ? ` sup sup-${en.sup % 3}` : '')}>
             <div className="row-between">
@@ -169,6 +171,22 @@ export default function WorkoutView() {
                 </button>
               </div>
             </div>
+            {comparison && (
+              <div className="dim small" data-testid="training-comparison">
+                上次（{comparison.date}）：{comparison.prior.sets} 组 · {comparison.prior.value}{' '}
+                {comparison.prior.unit}
+                <br />
+                本次已完成：{comparison.current.sets} 组 · {comparison.current.value}{' '}
+                {comparison.current.unit}
+                {comparison.current.sets > 0 && (
+                  <>
+                    {' '}
+                    · 差值 {comparison.delta > 0 ? '+' : ''}
+                    {comparison.delta}
+                  </>
+                )}
+              </div>
+            )}
             {en.note && <div className="target-note">{en.note}</div>}
             {plateLine(en) && <div className="plate-line mono">{plateLine(en)}</div>}
             {en.type !== 'cardio' && en.type !== 'time' && (

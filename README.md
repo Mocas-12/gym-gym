@@ -59,10 +59,11 @@
 - 🏆 **PR detection**: on finish, every exercise's estimated 1RM (Epley) is compared against history; beating a past record gets flagged 🎉 — first-time exercises only set a baseline
 - ⚖️ **Body weight**: daily log with a sparkline on Home and a full curve under History
 - 📊 **History & stats**: per-exercise estimated-1RM curves, a year-long GitHub-style training heatmap, monthly sessions / volume, per-exercise bests, expandable workout records
+- 📅 **Weekly review**: calendar-week sessions, work sets, strength volume, timed/cardio totals and comparison with the preceding week; compare each exercise with its previous session during training
 - 💾 **One-tap backup**: export everything as a single JSON file, import it on any device
 - ☁️ **Optional sync & push**: connect your own tiny Cloudflare Worker for multi-device sync and Web Push rest alerts ([docs/SYNC_PUSH.md](./docs/SYNC_PUSH.md)) — plus built-in diagnostics that report crashes and Service-Worker status to that same backend so stale-device mysteries are one tap away
 - 🈶 **Chinese-first UI** with a dark iOS-style theme
-- 🔒 **Local-first**: no accounts, no third-party servers — the entire state is one JSON document in `localStorage`
+- 🔒 **Local-first**: no accounts, no third-party servers — training state stays in `localStorage`, recovery snapshots in IndexedDB
 
 ## 🎨 UI Design
 

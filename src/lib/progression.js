@@ -37,6 +37,10 @@ export const round05 = v => Math.round(v * 2) / 2
 /** 按 pct 比例减载（默认 -10%）并取 0.5kg 步长 @param {number} kg @param {number} [pct] @returns {number} */
 export const deloadKg = (kg, pct = 0.1) => round05(kg * (1 - pct))
 
+/** @param {import('./types.js').SetEntry} s @returns {boolean} */
+const eligible = s =>
+  !!s.done && !s.w && (((s.kg ?? 0) > 0 && ((s.reps ?? 0) > 0 || s.reps == null)) || (s.sec ?? 0) > 0)
+
 /**
  * 该动作最近 n 次训练的完成组（workouts 新的在前）。
  * 力量：kg×reps 都要有；计时类（sec 字段）有秒即可。
@@ -51,12 +55,7 @@ export function sessionsOf(workouts, exId, n = 2) {
   for (const w of workouts || []) {
     if (!w) continue
     const e = (w.entries || []).find(x => x?.exId === exId)
-    const sets = e
-      ? (e.sets || []).filter(
-          s =>
-            s.done && !s.w && (((s.kg ?? 0) > 0 && ((s.reps ?? 0) > 0 || s.reps == null)) || (s.sec ?? 0) > 0)
-        )
-      : null
+    const sets = e ? (e.sets || []).filter(eligible) : null
     if (sets && sets.length) {
       out.push(sets)
       if (out.length >= n) break
@@ -77,10 +76,25 @@ export function nextTarget(cfg, workouts, exId) {
   if (!cfg || cfg.scheme === 'none' || !exId) return null
   const [last, prev] = sessionsOf(workouts, exId, 2)
   if (!last) return null
+  const entry = (workouts || [])
+    .flatMap(w => w?.entries || [])
+    .find(e => e.exId === exId && e.sets?.some(eligible))
+  const planned = Math.max(entry?.plannedSets || 0, (entry?.sets || []).filter(s => !s.w).length, last.length)
   // 进 schemes 运算前按「字段必有」处理：sessionsOf 已过滤有效组，cfg 由 DEFAULT_CFG 补全
   const kg = /** @type {number} */ (last[0].kg)
   /** 完成组的 reps 缺失视为 0（比较用，不参与展示） @param {import('./types.js').SetEntry} s @returns {number} */
   const repsOf = s => /** @type {number} */ (s.reps)
+
+  if (cfg.scheme !== 'time') {
+    if (!Number.isFinite(kg) || !last.every(s => Number.isFinite(s.reps))) return null
+    if (last.length < planned)
+      return {
+        kg,
+        reps: Math.max(...last.map(repsOf)),
+        sets: planned,
+        note: `上次仅完成 ${last.length}/${planned} 组 → 重量不变，先完成原计划`,
+      }
+  }
 
   if (cfg.scheme === 'linear') {
     const reps = /** @type {number} */ (cfg.reps)
@@ -153,18 +167,27 @@ export function nextTarget(cfg, workouts, exId) {
 
   if (cfg.scheme === 'time') {
     // 计时递增（平板支撑等）：秒数存在 sec 字段（旧数据在 kg）。全部达标 → 目标时间 +incSec
-    const target = cfg.targetSec || 45
     const incSec = cfg.incSec || 5
     const maxSec = cfg.maxSec || 120
     /** @param {import('./types.js').SetEntry} s @returns {number} */
     const secsOf = s => s.sec ?? s.kg ?? 0
-    if (last.every(s => secsOf(s) >= target)) {
+    const target = Math.min(
+      maxSec,
+      Math.max(cfg.targetSec || 45, entry?.targetSec || Math.min(...last.map(secsOf)))
+    )
+    if (last.length >= planned && last.every(s => secsOf(s) >= target)) {
       if (target >= maxSec)
         return { kg: target, sec: target, reps: null, note: `已到上限 ${maxSec} 秒，保持` }
       const t = Math.min(maxSec, target + incSec)
-      return { kg: t, sec: t, reps: null, note: `上次全部 ≥${target} 秒 → 目标加到 ${t} 秒` }
+      return { kg: t, sec: t, reps: null, sets: planned, note: `上次全部 ≥${target} 秒 → 目标加到 ${t} 秒` }
     }
-    return { kg: target, sec: target, reps: null, note: `没做满 ${target} 秒 → 目标不变，先补齐` }
+    return {
+      kg: target,
+      sec: target,
+      reps: null,
+      sets: planned,
+      note: `没做满 ${planned} 组 × ${target} 秒 → 目标不变，先补齐`,
+    }
   }
 
   // double progression

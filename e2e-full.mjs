@@ -9,6 +9,7 @@ const browser = await (process.env.E2E_BROWSER === 'webkit'
 const results = []
 const check = (name, ok, detail = '') => {
   results.push([ok ? 'PASS' : 'FAIL', name, detail])
+  if (process.env.E2E_PROGRESS) console.log(name, ok ? 'PASS' : 'FAIL')
   if (!ok && detail) results.push(['INFO', name + ' 详情', detail])
 }
 const errors = []
@@ -19,6 +20,7 @@ async function fresh(seed) {
     isMobile: true,
     hasTouch: true,
   })
+  page.setDefaultTimeout(15000)
   page.on('pageerror', e => errors.push('[pageerror] ' + e.message))
   page.on('console', m => {
     if (m.type() === 'error') errors.push('[console] ' + m.text())
@@ -346,6 +348,16 @@ for (const [w, h, name] of [
   await p.locator('.done-btn').first().click()
   await p.click('.tabbar >> text=计划')
   check('H2 计划页也显示休息计时', await p.isVisible('.restbar'))
+  const deadline = await p.evaluate(() => JSON.parse(localStorage.getItem('gym-gym-rest')).restUntil)
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.locator('.restbar').waitFor()
+  check(
+    'H9 刷新后恢复原休息截止时间',
+    await p.evaluate(
+      expected => JSON.parse(localStorage.getItem('gym-gym-rest')).restUntil === expected,
+      deadline
+    )
+  )
   await p.click('.tabbar >> text=设置')
   await p.locator('input[type="file"]').setInputFiles({
     name: 'backup.json',
@@ -366,6 +378,7 @@ for (const [w, h, name] of [
   )
   await p.click('button:has-text("确认导入")')
   await p.click('button:has-text("恢复上次数据")')
+  await p.waitForFunction(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.active)
   check(
     'H4 恢复点能恢复导入前的训练',
     await p.evaluate(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.active)
@@ -379,12 +392,15 @@ for (const [w, h, name] of [
   // 真实 HTTP 路由和版本校验另由 backend/worker.test.js 覆盖。
   await p.evaluate(() => {
     const original = window.fetch.bind(window)
+    let cloud = { workouts: [], bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 80 }] },
+      rev = 2
     window.fetch = (url, options) => {
       if (!String(url).startsWith('https://sync.test/')) return original(url, options)
-      const data =
-        String(url).endsWith('/api/data') && (!options?.method || options.method === 'GET')
-          ? { rev: 2, state: { workouts: [], bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 80 }] } }
-          : {}
+      if (options?.method === 'PUT' && String(url).endsWith('/api/data')) {
+        cloud = JSON.parse(options.body).state
+        rev++
+      }
+      const data = { rev, state: cloud }
       return Promise.resolve(
         new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
       )
@@ -402,13 +418,31 @@ for (const [w, h, name] of [
     await p.evaluate(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight[0].kg === 72)
   )
   await p.getByRole('button', { name: '采纳云端数据' }).click()
+  await p.waitForFunction(() => {
+    const s = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+    return s.bodyweight[0]?.kg === 80 && !s.sync.dirty
+  })
   check(
     'H6 采纳云端后可恢复本机记录',
-    await p.evaluate(() => {
+    await p.evaluate(async () => {
       const state = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+      const backup = await new Promise((resolve, reject) => {
+        const r = indexedDB.open('gym-gym-recovery', 1)
+        r.onsuccess = () => {
+          const db = r.result
+          const read = db.transaction('backups').objectStore('backups').get('latest')
+          read.onsuccess = () => {
+            db.close()
+            resolve(read.result)
+          }
+          read.onerror = reject
+        }
+        r.onerror = reject
+      })
       return (
         state.bodyweight[0].kg === 80 &&
-        JSON.parse(state.recovery.json).bodyweight[0].kg === 72 &&
+        JSON.parse(backup.json).bodyweight[0].kg === 72 &&
+        !state.recovery.json &&
         !state.sync.dirty
       )
     })
@@ -427,6 +461,60 @@ for (const [w, h, name] of [
   await p.locator('.bm-v').first().waitFor()
   check('H8 离线刷新保留应用外壳与懒加载模块', (await p.textContent('h1')) === '历史')
   await p.context().setOffline(false)
+  await p.close()
+}
+
+{
+  const start = Date.now() - 86400000
+  const p = await fresh({
+    workouts: [
+      {
+        id: 'large',
+        name: '容量边界测试',
+        start,
+        end: start + 60000,
+        _testPadding: 'x'.repeat(1400000),
+        entries: [{ exId: 'bench', name: '杠铃卧推', sets: [{ kg: 60, reps: 8, done: true }] }],
+      },
+    ],
+  })
+  await p.evaluate(() => {
+    let i = 0
+    try {
+      for (; i < 200; i++) localStorage.setItem('quota-test-' + i, 'x'.repeat(64000))
+    } catch {}
+  })
+  await p.click('.tabbar >> text=历史')
+  await p.locator('.card-open').first().click()
+  await p.getByRole('button', { name: '删除', exact: true }).click()
+  await p.getByRole('button', { name: /确认删除/ }).click()
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.workouts.length === 0)
+  check(
+    'H10 localStorage 接近配额时仍能删除并保留 IndexedDB 恢复点',
+    await p.evaluate(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.recovery)
+  )
+  await p.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('quota-test-')) localStorage.removeItem(key)
+  })
+  await p.click('.tabbar >> text=设置')
+  await p.getByRole('button', { name: '恢复上次数据', exact: true }).click()
+  await p.waitForFunction(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.workouts.length === 1)
+  check(
+    'H11 大记录删除后完整恢复',
+    await p.evaluate(
+      () => JSON.parse(localStorage.getItem('gym_gym_v1')).state.workouts[0]._testPadding.length === 1400000
+    )
+  )
+  await p.click('.tabbar >> text=首页')
+  await p.getByText('训练周回顾', { exact: true }).waitFor()
+  check('H12 周回顾显示正式组统计', await p.getByText('训练周回顾', { exact: true }).isVisible())
+  await p.getByText('推日 · 胸肩三头', { exact: true }).last().click()
+  await p.locator('[data-testid="training-comparison"]').first().waitFor()
+  check(
+    'H13 训练中显示上次同动作正式组对比',
+    await p.locator('[data-testid="training-comparison"]').first().isVisible()
+  )
   await p.close()
 }
 

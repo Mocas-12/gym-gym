@@ -5,7 +5,7 @@
 /** @typedef {{ kg?: number, reps?: number|null, sec?: number, min?: number, speed?: number, incl?: number, done?: boolean, w?: boolean, rir?: number }} SetEntry */
 
 /** 训练中的一个动作条目（sets 至少在归档后必有） */
-/** @typedef {{ exId: string, name?: string, type?: string, m?: string|null, eq?: string|null, restSec?: number|null, sup?: number|null, sets?: SetEntry[], note?: string }} Entry */
+/** @typedef {{ exId: string, name?: string, type?: string, m?: string|null, eq?: string|null, restSec?: number|null, sup?: number|null, sets?: SetEntry[], plannedSets?: number, targetSec?: number, note?: string }} Entry */
 
 /** 个人纪录 */
 /** @typedef {{ exId: string, name?: string, e1rm: number }} PRItem */

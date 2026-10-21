@@ -73,7 +73,7 @@ export default function WorkoutEdit({ workout, onClose }) {
       return [...prev, { exId: ex.id, name: ex.n, type: ex.type || 'reps', m: ex.m || null, sets: [blank] }]
     })
   }
-  const save = () => {
+  const save = async () => {
     const dur = workout ? Math.max(600e3, (workout.end ?? workout.start) - workout.start) : 3600e3
     const start = new Date(dateStr + 'T12:00:00').getTime()
     const doc = {
@@ -85,7 +85,13 @@ export default function WorkoutEdit({ workout, onClose }) {
       end: start + dur,
       entries,
     }
-    const saved = workout ? updateWorkout(workout.id, doc) : addWorkout(doc)
+    let saved
+    try {
+      saved = workout ? await updateWorkout(workout.id, doc) : addWorkout(doc)
+    } catch (err) {
+      toast(err.message)
+      return
+    }
     if (!saved) {
       toast('还没有完成的组，保存不了')
       return

@@ -4,11 +4,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
-import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
+import { finalizeWorkout, prefillFor, withStats, rebuildStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
 import { pushData, pullData } from '../lib/sync.js'
 import { normalizeState } from '../lib/normalize.js'
 import { localDate } from '../lib/dates.js'
+import { readRecovery, writeRecovery } from '../lib/recovery.js'
+import { DATA_KEYS, fingerprints, mergeDocuments, chooseConflicts, sameFingerprints } from '../lib/merge.js'
 
 /* 启动自愈（第一优先）：store 初始化之前就把持久层里的脏数据洗掉。
  * 此前只清洗内存态、写回比较时机有 bug，导致脏数据长期滞留在存储里反复引发崩溃。 */
@@ -47,7 +49,7 @@ const supIndexOf = (routine, exId) => {
 let changeVersion = 0
 let connectionVersion = 0
 let inFlight = null
-const DATA_KEYS = ['settings', 'customEx', 'routines', 'plan', 'workouts', 'bodyweight']
+const snapshot = state => Object.fromEntries(DATA_KEYS.map(key => [key, state[key]]))
 
 export const useStore = create(
   persist(
@@ -75,9 +77,24 @@ export const useStore = create(
       /* 从渐进引擎/预填构建该动作的初始组。cfg 来自所从的 routine（null=自由训练只预填）。 */
       buildSets(exId, cfg) {
         const { workouts } = get()
-        const t = nextTarget(cfg, workouts, exId)
+        const type = get()
+          .allEx()
+          .find(ex => ex.id === exId)?.type
+        const effective =
+          type === 'cardio'
+            ? null
+            : type === 'time' && cfg && cfg.scheme !== 'none'
+              ? { ...cfg, scheme: 'time' }
+              : cfg?.scheme === 'time'
+                ? null
+                : cfg
+        const t = nextTarget(effective, workouts, exId)
         if (t) {
-          const n = t.sets || 3
+          const n =
+            t.sets ||
+            workouts.flatMap(w => w.entries).find(e => e.exId === exId)?.plannedSets ||
+            cfg?.sets ||
+            3
           return {
             sets: Array.from({ length: n }, () => ({
               kg: t.kg,
@@ -86,6 +103,19 @@ export const useStore = create(
               done: false,
             })),
             note: t.note,
+            targetSec: t.sec,
+          }
+        }
+        if (
+          type === 'time' &&
+          effective?.scheme === 'time' &&
+          !workouts.some(w => w.entries.some(e => e.exId === exId))
+        ) {
+          const sec = effective.targetSec || 45
+          return {
+            sets: Array.from({ length: effective.sets || 3 }, () => ({ sec, done: false })),
+            note: null,
+            targetSec: sec,
           }
         }
         return { sets: prefillFor(exId, workouts), note: null }
@@ -96,7 +126,7 @@ export const useStore = create(
           const ex = get()
             .allEx()
             .find(e => e.id === id)
-          const { sets, note } = get().buildSets(id, routine?.cfg || null)
+          const { sets, note, targetSec } = get().buildSets(id, routine?.cfg || null)
           return {
             exId: id,
             name: ex?.n || id,
@@ -106,6 +136,7 @@ export const useStore = create(
             restSec: ex?.rest ?? null,
             sup: supIndexOf(routine, id),
             sets,
+            ...(targetSec != null ? { targetSec } : {}),
             ...(note ? { note } : {}),
           }
         })
@@ -117,7 +148,7 @@ export const useStore = create(
         const ex = get()
           .allEx()
           .find(e => e.id === exId)
-        const { sets, note } = get().buildSets(exId, cfg)
+        const { sets, note, targetSec } = get().buildSets(exId, cfg)
         set({
           active: {
             ...a,
@@ -132,6 +163,7 @@ export const useStore = create(
                 restSec: ex?.rest ?? null,
                 sup: supIndexOf(routine, exId),
                 sets,
+                ...(targetSec != null ? { targetSec } : {}),
                 ...(note ? { note } : {}),
               },
             ],
@@ -250,97 +282,107 @@ export const useStore = create(
       addWorkout(doc) {
         const clean = withStats(doc, get().workouts)
         if (!clean.entries.length) return null
-        set({ workouts: [clean, ...get().workouts].sort((a, b) => b.start - a.start) })
+        set({ workouts: rebuildStats([clean, ...get().workouts]) })
         return clean
       },
-      updateWorkout(id, patch) {
+      async updateWorkout(id, patch) {
         const cur = get().workouts.find(w => w?.id === id)
         if (!cur) return null
         const others = get().workouts.filter(w => w?.id !== id)
         const clean = withStats({ ...cur, ...patch, id }, others)
         if (!clean.entries.length) return null
-        get().saveRecovery('编辑训练')
-        set({ workouts: [clean, ...others].sort((a, b) => b.start - a.start) })
+        const recovery = await get().saveRecovery('编辑训练')
+        set({ recovery, workouts: rebuildStats([clean, ...others]) })
         return clean
       },
 
-      /* 冲突保留双方文档，用户明确选择后才替换。 */
+      /* 记录级冲突保留双方，选择只影响冲突行。 */
       setSync(patch) {
         const old = get().sync
         const changed =
           (patch.url != null && patch.url !== old.url) || (patch.token != null && patch.token !== old.token)
         if (changed) connectionVersion++
-        set({ sync: { ...old, ...(changed ? { conflict: null, status: 'idle' } : {}), ...patch } })
-      },
-      adoptRemote(state, rev) {
-        const cur = get()
-        const clean = normalizeState({ ...state })
-        get().saveRecovery('采纳云端数据')
         set({
-          settings: { restSec: 90, sound: true, vibrate: true, showRir: true, ...clean.settings },
-          customEx: clean.customEx,
-          routines: (clean.routines || []).map(r => ({
-            supersets: [],
-            ...r,
-            cfg: { ...DEFAULT_CFG(), ...r.cfg },
-          })),
-          plan: clean.plan || cur.plan,
-          workouts: clean.workouts,
-          bodyweight: clean.bodyweight,
-          sync: { ...cur.sync, rev, lastSync: Date.now(), dirty: false, conflict: null, status: 'synced' },
+          sync: { ...old, ...(changed ? { conflict: null, status: 'idle', base: null } : {}), ...patch },
         })
-        get().setSync({ dirty: false })
+      },
+      async adoptRemote(state, rev, backup = true) {
+        const recovery = backup ? await get().saveRecovery('采纳云端数据') : get().recovery
+        const clean = normalizeState({ ...state })
+        set({
+          ...Object.fromEntries(
+            DATA_KEYS.filter(key => clean[key] !== undefined).map(key => [key, clean[key]])
+          ),
+          recovery,
+        })
+        get().setSync({ rev, lastSync: Date.now(), dirty: false, conflict: null, status: 'synced' })
       },
       async syncNow() {
         const s = get().sync
         if (!s.url || !s.token) return 'off'
         if (s.conflict) return 'conflict'
         if (inFlight) return inFlight
-        const version = changeVersion
         const connection = connectionVersion
-        const currentConnection = () =>
-          connectionVersion === connection && get().sync.url === s.url && get().sync.token === s.token
+        const connected = () => connectionVersion === connection
         get().setSync({ status: 'syncing' })
         inFlight = (async () => {
           try {
-            if (!s.dirty) {
-              const r = await pullData(s.url, s.token)
-              if (!currentConnection()) return 'off'
-              if (!r.ok) {
-                get().setSync({ status: 'error' })
-                return 'error'
+            // 每次先拉取。409 后重新合并，绝不按旧 revision 覆盖。
+            for (let attempt = 0; attempt < 3; attempt++) {
+              const response = await pullData(s.url, s.token)
+              if (!connected()) return 'off'
+              if (!response.ok) throw new Error('pull')
+              const { state: cloud, rev = 0 } = response.data
+              const local = snapshot(get()),
+                version = changeVersion
+              const remote = cloud || local
+              const result = await mergeDocuments(local, remote, get().sync.base || {})
+              if (!connected()) return 'off'
+              if (version !== changeVersion) continue
+              if (result.conflicts.length) {
+                get().setSync({ conflict: { ...result, state: remote, rev, version }, status: 'conflict' })
+                return 'conflict'
               }
-              if (r.data.rev !== s.rev && r.data.state) {
-                if (version !== changeVersion) {
-                  get().setSync({ conflict: { rev: r.data.rev, state: r.data.state }, status: 'conflict' })
-                  return 'conflict'
+              const merged = normalizeState(result.merged)
+              const hashes = await fingerprints(merged)
+              if (!connected()) return 'off'
+              if (version !== changeVersion) continue
+              let nextRev = rev
+              if (!cloud || !sameFingerprints(hashes, result.remoteHashes)) {
+                const push = await pushData(s.url, s.token, rev, merged)
+                if (!connected()) return 'off'
+                if (push.status === 409) continue
+                if (!push.ok) throw new Error('push')
+                nextRev = push.data.rev
+              }
+              // 请求期间的新编辑保留在本机，下次以请求前本机为祖先继续合并。
+              if (version !== changeVersion) {
+                get().setSync({ rev: nextRev, base: result.localHashes, dirty: true, status: 'synced' })
+                return 'synced'
+              }
+              if (!sameFingerprints(hashes, result.localHashes)) {
+                try {
+                  const recovery = await get().saveRecovery('同步合并')
+                  set({ recovery })
+                } catch {
+                  get().setSync({ rev: nextRev, base: result.localHashes, dirty: true, status: 'error' })
+                  return 'error'
                 }
-                get().adoptRemote(r.data.state, r.data.rev)
-                return 'adopted'
+                if (!connected()) return 'off'
+                await get().adoptRemote(merged, nextRev, false)
               }
-              get().setSync({ lastSync: Date.now(), status: 'synced' })
-              return 'synced'
-            }
-            const snapshot = Object.fromEntries(DATA_KEYS.map(key => [key, get()[key]]))
-            const r = await pushData(s.url, s.token, s.rev, snapshot)
-            if (!currentConnection()) return 'off'
-            if (r.ok) {
               get().setSync({
-                rev: r.data.rev,
+                rev: nextRev,
+                base: hashes,
+                dirty: false,
                 lastSync: Date.now(),
-                dirty: version !== changeVersion,
                 status: 'synced',
               })
               return 'synced'
             }
-            if (r.status === 409) {
-              get().setSync({ conflict: { rev: r.data.rev, state: r.data.state }, status: 'conflict' })
-              return 'conflict'
-            }
-            get().setSync({ status: 'error' })
-            return 'error'
+            throw new Error('数据仍在变化，请重试')
           } catch {
-            if (currentConnection()) get().setSync({ status: 'error' })
+            if (connected()) get().setSync({ status: 'error' })
             return 'error'
           } finally {
             inFlight = null
@@ -348,21 +390,24 @@ export const useStore = create(
         })()
         return inFlight
       },
-      resolveConflict(choice) {
+      async resolveConflict(choice) {
         const conflict = get().sync.conflict
         if (!conflict) return
-        if (choice === 'remote' && conflict.state) get().adoptRemote(conflict.state, conflict.rev)
-        else if (choice === 'local') {
-          set({
-            recovery: {
-              json: JSON.stringify({ ...conflict.state, app: 'gym-gym', version: 2 }),
-              reason: '覆盖云端数据',
-              at: Date.now(),
-            },
-          })
-          get().setSync({ rev: conflict.rev, conflict: null, dirty: true, status: 'idle' })
+        if (conflict.version !== changeVersion) {
+          get().setSync({ conflict: null })
           return get().syncNow()
         }
+        const connection = connectionVersion
+        const recovery = await get().saveRecovery(
+          '解决同步冲突',
+          JSON.stringify({ ...conflict.state, app: 'gym-gym', version: 2 })
+        )
+        const resolved = chooseConflicts(conflict, choice)
+        if (connection !== connectionVersion || get().sync.conflict !== conflict) return 'off'
+        set({ recovery })
+        await get().adoptRemote(resolved, conflict.rev, false)
+        get().setSync({ base: conflict.remoteHashes, dirty: true })
+        return get().syncNow()
       },
 
       /* ---- 计划与模板 ---- */
@@ -386,15 +431,15 @@ export const useStore = create(
         if (!active) return null
         const { workout } = finalizeWorkout(active, workouts)
         if (!workout) return null
-        set({ workouts: [workout, ...workouts], active: null })
+        set({ workouts: rebuildStats([workout, ...workouts]), active: null })
         return workout
       },
       discardWorkout() {
         set({ active: null })
       },
-      deleteWorkout(id) {
-        get().saveRecovery('删除训练')
-        set({ workouts: get().workouts.filter(w => w.id !== id) })
+      async deleteWorkout(id) {
+        const recovery = await get().saveRecovery('删除训练')
+        set({ recovery, workouts: rebuildStats(get().workouts.filter(w => w.id !== id)) })
       },
 
       /* ---- 数据 ---- */
@@ -430,12 +475,13 @@ export const useStore = create(
           2
         )
       },
-      importState(json) {
+      async importState(json) {
         const d = JSON.parse(json)
         if (!d || d.app !== 'gym-gym' || Array.isArray(d)) throw new Error('不是 gym-gym 的备份文件')
         const clean = normalizeState(d)
-        get().saveRecovery('导入备份')
+        const recovery = await get().saveRecovery('导入备份')
         set({
+          recovery,
           settings: { ...get().settings, ...clean.settings },
           customEx: clean.customEx,
           routines: (clean.routines || PRESET_ROUTINES).map(r => ({
@@ -453,18 +499,32 @@ export const useStore = create(
           active: clean.active || null,
         })
       },
-      saveRecovery(reason) {
-        set({ recovery: { json: get().exportState(), reason, at: Date.now() } })
+      async saveRecovery(reason, remoteJson) {
+        const version = changeVersion,
+          active = get().active
+        const value = {
+          json: get().exportState(),
+          reason,
+          at: Date.now(),
+          ...(remoteJson ? { remoteJson } : {}),
+        }
+        await writeRecovery(value)
+        if (version !== changeVersion || active !== get().active) throw new Error('数据已变化，请重试')
+        return { reason, at: value.at, hasRemote: !!remoteJson }
       },
-      restoreRecovery() {
+      async restoreRecovery(remote = false) {
         const recovery = get().recovery
         if (!recovery) return false
-        get().importState(recovery.json)
+        const value = recovery.json ? recovery : await readRecovery()
+        const json = remote ? value?.remoteJson : value?.json
+        if (!json) throw new Error('恢复点不存在，请使用导出的备份')
+        await get().importState(json)
         return true
       },
-      resetAll() {
-        get().saveRecovery('清空数据')
+      async resetAll() {
+        const recovery = await get().saveRecovery('清空数据')
         set({
+          recovery,
           settings: { restSec: 90, sound: true, vibrate: true },
           customEx: [],
           routines: PRESET_ROUTINES,
@@ -515,7 +575,7 @@ export const useStore = create(
         customEx: s.customEx,
         routines: s.routines,
         plan: s.plan,
-        sync: s.sync,
+        sync: { ...s.sync, conflict: null, status: 'idle' },
         workouts: s.workouts,
         bodyweight: s.bodyweight,
         active: s.active,

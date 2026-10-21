@@ -21,7 +21,7 @@ export function e1rmSeries(workouts, exId) {
   for (const w of workouts || []) {
     if (!w || !w.start) continue
     for (const e of w.entries || []) {
-      if (e?.exId !== exId) continue
+      if (e?.exId !== exId || e.type === 'time' || e.type === 'cardio') continue
       const v = best1RM(e.sets)
       if (v <= 0) continue
       const k = dayKey(w.start)

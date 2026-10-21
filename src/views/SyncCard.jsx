@@ -9,7 +9,6 @@ export default function SyncCard() {
   const sync = useStore(s => s.sync)
   const setSync = useStore(s => s.setSync)
   const syncNow = useStore(s => s.syncNow)
-  const adoptRemote = useStore(s => s.adoptRemote)
   const resolveConflict = useStore(s => s.resolveConflict)
   const toast = useUI(s => s.toast)
   const [url, setUrl] = useState(sync.url)
@@ -48,16 +47,11 @@ export default function SyncCard() {
         toast('连接失败：' + (pull.data.error || pull.status))
         return
       }
-      const dirty = useStore.getState().sync.dirty
-      setSync({ url: base, token: tok, rev: pull.data.rev || 0, lastSync: 0, dirty })
-      if (pull.data.state) {
-        if (dirty) setSync({ conflict: { rev: pull.data.rev, state: pull.data.state }, status: 'conflict' })
-        else adoptRemote(pull.data.state, pull.data.rev)
-      } else {
-        setSync({ dirty: true })
-        await syncNow()
-      }
+      setSync({ url: base, token: tok, rev: 0, lastSync: 0, dirty: true })
+      await syncNow()
       toast('已连接，同步已开启')
+    } catch (err) {
+      toast(err.message)
     } finally {
       setBusy(false)
     }
@@ -180,7 +174,12 @@ export default function SyncCard() {
           {sync.conflict && (
             <div role="status">
               <p className="small">
-                本机和云端都有修改，已保留两份。选择要保留的数据；采纳云端前会保存本机恢复点。
+                不同记录的改动已自动合并。以下记录双方都改过，请选择这些冲突记录要保留的版本；操作前会保留双方恢复点。
+              </p>
+              <p className="dim small">
+                {sync.conflict.conflicts
+                  ?.map(c => `${c.key} · ${c.local?.name || c.remote?.name || c.id}`)
+                  .join('、')}
               </p>
               <div className="row">
                 <button
@@ -201,9 +200,16 @@ export default function SyncCard() {
                 <button
                   className="btn ghost"
                   disabled={busy || !sync.conflict.state}
-                  onClick={() => {
-                    resolveConflict('remote')
-                    toast('已采纳云端，可通过恢复点撤销')
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      const result = await resolveConflict('remote')
+                      toast(result === 'synced' ? '已合并云端冲突记录' : '未完成同步，请重试')
+                    } catch (err) {
+                      toast(err.message)
+                    } finally {
+                      setBusy(false)
+                    }
                   }}
                 >
                   采纳云端数据

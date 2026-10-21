@@ -9,6 +9,7 @@ import { best1RM } from './onerm.js'
  * @returns {number}
  */
 export function entryVolume(e) {
+  if (e.type === 'time' || e.type === 'cardio') return 0
   // 热身组（w 标记）不计容量；无有效 kg×reps 的组（有氧/计时）也不计
   return (e.sets || []).reduce((sum, s) => {
     if (!s.done || s.w || !s.kg || !s.reps) return sum
@@ -37,7 +38,9 @@ export function findPRs(active, workouts) {
   const past = {}
   for (const w of workouts || []) {
     if (!w) continue
+    if (w.start != null && active.start != null && w.start >= active.start) continue
     for (const e of w.entries || []) {
+      if (e.type === 'time' || e.type === 'cardio') continue
       const b = best1RM(e.sets)
       if (b > (past[e.exId] || 0)) past[e.exId] = b
     }
@@ -45,6 +48,7 @@ export function findPRs(active, workouts) {
   /** @type {import('./types.js').PRItem[]} */
   const prs = []
   for (const e of active.entries || []) {
+    if (e.type === 'time' || e.type === 'cardio') continue
     const now = best1RM(e.sets)
     if (past[e.exId] != null && now > past[e.exId])
       prs.push({ exId: e.exId, name: e.name, e1rm: Math.round(now * 10) / 10 })
@@ -60,7 +64,11 @@ export function findPRs(active, workouts) {
  */
 export function finalizeWorkout(active, workouts) {
   const entries = (active.entries || [])
-    .map(e => ({ ...e, sets: (e.sets || []).filter(s => s.done) }))
+    .map(e => ({
+      ...e,
+      plannedSets: (e.sets || []).filter(s => !s.w).length,
+      sets: (e.sets || []).filter(s => s.done),
+    }))
     .filter(e => e.sets.length > 0)
   if (!entries.length) return { workout: null, prs: [] }
   const doc = { ...active, entries, end: Date.now(), volume: 0 }
@@ -99,7 +107,11 @@ export function withStats(doc, others) {
   const clean = {
     ...doc,
     entries: (doc.entries || [])
-      .map(e => ({ ...e, sets: (e.sets || []).filter(s => s.done) }))
+      .map(e => ({
+        ...e,
+        plannedSets: Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length),
+        sets: (e.sets || []).filter(s => s.done),
+      }))
       .filter(e => e.sets.length > 0),
   }
   clean.volume = workoutVolume(clean)
@@ -107,4 +119,38 @@ export function withStats(doc, others) {
   if (prs.length) clean.prs = prs
   else delete clean.prs
   return clean
+}
+
+/** 按发生顺序重算所有派生统计，编辑或删除早期记录后不会留下过期 PR。
+ * @param {import('./types.js').Workout[]} workouts
+ * @returns {import('./types.js').Workout[]}
+ */
+export function rebuildStats(workouts) {
+  /** @type {Map<string, number>} */
+  const best = new Map()
+  const sorted = [...workouts].sort(
+    (a, b) => (a.start || 0) - (b.start || 0) || String(a.id).localeCompare(String(b.id))
+  )
+  const result = sorted.map(w => {
+    const entries = (w.entries || []).map(e => ({
+      ...e,
+      plannedSets: Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length),
+      sets: (e.sets || []).filter(s => s.done),
+    }))
+    /** @type {import('./types.js').PRItem[]} */
+    const prs = []
+    for (const e of entries) {
+      if (e.type === 'time' || e.type === 'cardio') continue
+      const value = best1RM(e.sets)
+      const previous = best.get(e.exId) || 0
+      if (previous > 0 && value > previous)
+        prs.push({ exId: e.exId, name: e.name, e1rm: Math.round(value * 10) / 10 })
+      if (value > previous) best.set(e.exId, value)
+    }
+    const doc = { ...w, entries, volume: workoutVolume({ ...w, entries }) }
+    if (prs.length) doc.prs = prs
+    else delete doc.prs
+    return doc
+  })
+  return result.reverse()
 }

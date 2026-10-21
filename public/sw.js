@@ -66,7 +66,29 @@ self.addEventListener('push', e => {
     (async () => {
       if (d.restId) {
         const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        if (clients.some(c => c.visibilityState === 'visible')) return
+        const handled = await Promise.all(
+          clients
+            .filter(c => c.visibilityState === 'visible')
+            .map(
+              c =>
+                new Promise(resolve => {
+                  const channel = new MessageChannel()
+                  const finish = value => {
+                    clearTimeout(timeout)
+                    channel.port1.close()
+                    resolve(value)
+                  }
+                  const timeout = setTimeout(() => finish(false), 800)
+                  channel.port1.onmessage = event => finish(event.data?.handled === true)
+                  try {
+                    c.postMessage({ type: 'rest-notification', restId: d.restId }, [channel.port2])
+                  } catch {
+                    finish(false)
+                  }
+                })
+            )
+        )
+        if (handled.some(Boolean)) return
       }
       await self.registration.showNotification(d.title || 'GymGym', {
         body: d.body || '',
