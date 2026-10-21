@@ -190,6 +190,8 @@ export default function SyncCard() {
                     try {
                       const result = await resolveConflict('local')
                       toast(result === 'synced' ? '已保留本机数据并同步' : '未完成同步，请重试')
+                    } catch (err) {
+                      toast(err.message)
                     } finally {
                       setBusy(false)
                     }
