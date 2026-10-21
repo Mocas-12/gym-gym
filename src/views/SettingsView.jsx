@@ -5,14 +5,18 @@ import InstallGuide from '../components/InstallGuide.jsx'
 import { hasInstallPrompt, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa.js'
 import { STANDARD_PLATES } from '../lib/plates.js'
 import SyncCard from './SyncCard.jsx'
+import { normalizeState } from '../lib/normalize.js'
+import { localDate } from '../lib/dates.js'
+import { APP_VERSION } from '../lib/telemetry.js'
 
 export default function SettingsView() {
-  const { settings, setSettings, exportState, importState, resetAll } = useStore()
+  const { settings, setSettings, exportState, importState, resetAll, recovery, restoreRecovery } = useStore()
   const toast = useUI(s => s.toast)
   const fileRef = useRef(null)
   const [standalone] = useState(isStandalone)
   const [canPrompt, setCanPrompt] = useState(hasInstallPrompt)
   const [installSheet, setInstallSheet] = useState(false)
+  const [pendingImport, setPendingImport] = useState(null)
   useEffect(() => onInstallAvailability(setCanPrompt), [])
   const [vp] = useState(() => ({
     w: window.innerWidth,
@@ -36,7 +40,7 @@ export default function SettingsView() {
     const blob = new Blob([exportState()], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `gym-gym-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `gym-gym-backup-${localDate()}.json`
     a.click()
     URL.revokeObjectURL(a.href)
     toast('备份已导出')
@@ -46,8 +50,16 @@ export default function SettingsView() {
     const f = e.target.files?.[0]
     if (!f) return
     try {
-      importState(await f.text())
-      toast('备份已导入')
+      const json = await f.text()
+      const data = JSON.parse(json)
+      if (!data || data.app !== 'gym-gym') throw new Error('不是 gym-gym 的备份文件')
+      const clean = normalizeState(data)
+      setPendingImport({
+        json,
+        workouts: clean.workouts.length,
+        weights: clean.bodyweight.length,
+        active: !!clean.active,
+      })
     } catch (err) {
       toast('导入失败：' + err.message)
     }
@@ -167,6 +179,54 @@ export default function SettingsView() {
           </button>
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={doImport} />
         </div>
+        {pendingImport && (
+          <div role="status">
+            <p>
+              将导入 {pendingImport.workouts} 次训练、{pendingImport.weights} 条体重记录
+              {pendingImport.active ? '和一份进行中的训练' : ''}，替换本机数据。替换前会保留恢复点。
+            </p>
+            <div className="row">
+              <button
+                className="btn primary"
+                onClick={() => {
+                  try {
+                    importState(pendingImport.json)
+                    setPendingImport(null)
+                    toast('备份已导入，可通过恢复点撤销')
+                  } catch (err) {
+                    toast('导入失败：' + err.message)
+                  }
+                }}
+              >
+                确认导入
+              </button>
+              <button className="btn ghost" onClick={() => setPendingImport(null)}>
+                取消
+              </button>
+            </div>
+          </div>
+        )}
+        {recovery && (
+          <div style={{ marginTop: 12 }}>
+            <p className="dim small">
+              最近恢复点：{recovery.reason}前 · {new Date(recovery.at).toLocaleString('zh-CN')}
+              。只保留一份，恢复后可再次点击撤销恢复。
+            </p>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                try {
+                  restoreRecovery()
+                  toast('已恢复，当前数据也已保存为恢复点')
+                } catch (err) {
+                  toast('恢复失败：' + err.message)
+                }
+              }}
+            >
+              恢复上次数据
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="section-title">同步与推送（可选）</div>
@@ -195,7 +255,7 @@ export default function SettingsView() {
         <button
           className="btn danger block"
           onClick={() => {
-            if (confirm('清空全部数据？不可恢复，建议先导出备份。')) {
+            if (confirm('清空全部数据？会先保存一份恢复点，仍建议导出备份。')) {
               resetAll()
               toast('已清空')
             }
@@ -207,7 +267,7 @@ export default function SettingsView() {
 
       {/* 设备视口调试信息：排查真机「底栏不贴边」类问题的一手数据 */}
       <div className="page-foot dim small mono">
-        GymGym v0.9.0 · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} ·{' '}
+        GymGym v{APP_VERSION} · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} ·{' '}
         {vp.standalone ? '主屏幕' : '浏览器'}
       </div>
     </div>

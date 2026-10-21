@@ -112,11 +112,11 @@ gym-gym/
 │   ├── gen-icons.mjs        # Pure-Node PNG encoder → app icons
 │   ├── inject-precache.mjs  # Injects the hashed-asset manifest into sw.js after build
 │   ├── deploy.mjs           # Build + orphan-commit dist/ to gh-pages
-│   └── deploy-backend.mjs   # Extract the Worker from docs/SYNC_PUSH.md → wrangler deploy
+│   └── deploy-backend.mjs   # Deploy backend/worker.js with its Durable Object binding
 ├── backend/
 │   ├── wrangler.toml        # Optional micro-backend config (KV binding, origins, VAPID)
 │   └── worker.test.js       # Full-chain tests: sync, RFC 8291 round-trip, rate limits, diagnostics
-├── docs/SYNC_PUSH.md        # Optional sync/push guide + the Worker source (single source of truth)
+├── docs/SYNC_PUSH.md        # Optional sync/push guide and upgrade instructions
 ├── src/
 │   ├── main.jsx / App.jsx   # Hash-routed tabs: home / workout / plan / history / settings
 │   ├── store/
@@ -138,7 +138,7 @@ gym-gym/
 │   │   └── *.test.js
 │   ├── components/          # TabBar / RestTimer / ExercisePicker / BodyMap / ErrorBoundary / ...
 │   └── views/               # Home / WorkoutView / PlanView / HistoryView / SettingsView / SyncCard
-├── e2e-full.mjs             # Playwright E2E matrix: 46 checks × Chromium/WebKit
+├── e2e-full.mjs             # Playwright E2E matrix: Full checks × Chromium/WebKit
 └── smoke.mjs                # Quick Playwright smoke against dev preview or the live URL
 ```
 
@@ -155,7 +155,7 @@ npm run dev
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Vite dev server with hot reload |
-| `npm test` | 73 unit tests (domain logic + the optional Worker) |
+| `npm test` | Unit tests (domain logic + the optional Worker) |
 | `npm run test:coverage` | Unit tests + coverage gate (lib layer ≥ 85%) |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
 | `npm run typecheck` | Strict JSDoc type-check over `src/lib` |
@@ -195,11 +195,11 @@ The data model is deliberately a single JSON document, so any future backend or 
 ## 🧪 Tests
 
 ```bash
-npm test                # 73 unit tests — domain logic (1RM, volume, PR, progression,
+npm test                # Unit tests — domain logic (1RM, volume, PR, progression,
                         # heatmap, muscle map, plates, plans) + the Worker (sync,
                         # RFC 8291 push round-trip, rate limits, diagnostics)
-npm run test:coverage   # + coverage gate: src/lib ≥ 85% statements/branches/functions/lines
-node e2e-full.mjs       # 46-check E2E matrix × Chromium & WebKit (build + preview first)
+npm run test:coverage   # + coverage gate: src/lib ≥ 85% statements/functions/lines; ≥ 78% branches
+npm run test:e2e        # Full E2E matrix × Chromium & WebKit (build + preview first)
 npm run smoke           # quick Playwright smoke
 ```
 
@@ -257,3 +257,5 @@ This project is open-sourced under the [MIT](./LICENSE) license — free to use,
 **GymGym** · built local-first, inspired by the architecture of [openGym](https://github.com/DuarteSantos8/openGym)
 
 </div>
+
+Data safety: imports show a preview before replacement. A single local recovery point protects deletion, history edits, imports, resets and sync conflict choices. Conflicts require an explicit choice; no clock-based overwrite. The optional backend now requires the USERS Durable Object binding; old KV documents migrate on first access. See docs/SYNC_PUSH.md before upgrading.

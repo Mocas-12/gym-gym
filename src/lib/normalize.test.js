@@ -2,6 +2,26 @@ import { describe, it, expect } from 'vitest'
 import { normalizeState } from './normalize.js'
 
 describe('normalizeState（历史页崩溃的终极防线）', () => {
+  it('对象形态的标题和提示不会被交给 React 渲染', () => {
+    const p = normalizeState({
+      workouts: [{ name: {}, entries: [{ exId: 'bench', name: {}, note: {}, sets: [] }] }],
+    })
+    expect(p.workouts[0].name).toBe('训练')
+    expect(p.workouts[0].entries[0]).toMatchObject({ name: 'bench', note: '' })
+  })
+  it('清理嵌套的组、非法数值和进行中训练', () => {
+    const p = normalizeState({
+      workouts: [
+        {
+          id: 'w',
+          entries: [{ exId: 'bench', sets: [null, 'bad', { kg: -5, reps: Infinity, done: true }] }],
+        },
+      ],
+      active: { entries: null },
+    })
+    expect(p.workouts[0].entries[0].sets).toEqual([{ done: true }])
+    expect(p.active).toBeNull()
+  })
   it('滤掉 null 训练、null 动作条目与无效记录', () => {
     const p = normalizeState({
       workouts: [
@@ -26,5 +46,31 @@ describe('normalizeState（历史页崩溃的终极防线）', () => {
   it('字段缺失时安全兜底', () => {
     expect(normalizeState({}).workouts).toEqual([])
     expect(normalizeState(null)).toBeNull()
+  })
+  it('畸形模板、计划和设置不会进入渲染与组数计算', () => {
+    const p = normalizeState({
+      routines: [
+        null,
+        {
+          id: 'r',
+          name: {},
+          exIds: [null, 'bench'],
+          supersets: [null, ['bench', null]],
+          cfg: { scheme: 'triple', sets: 1e9, min: 8, max: 2 },
+        },
+      ],
+      customEx: [{ id: 'c', n: {} }],
+      settings: { restSec: 'bad', plates: { bar: -1, avail: [0, '10', 10] } },
+      plan: { mode: 'bad', week: { 1: 'r', 7: 'bad' }, rotation: [null, 'r'] },
+    })
+    expect(p.routines[0]).toMatchObject({
+      name: 'r',
+      exIds: ['bench'],
+      supersets: [['bench']],
+      cfg: { sets: 3, min: 8, max: 8 },
+    })
+    expect(p.customEx[0].n).toBe('c')
+    expect(p.settings).toMatchObject({ restSec: 90, plates: { bar: 20, avail: [10] } })
+    expect(p.plan).toEqual({ mode: 'week', week: { 1: 'r' }, rotation: ['r'] })
   })
 })

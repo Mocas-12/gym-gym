@@ -5,9 +5,7 @@ import { chromium, webkit } from 'playwright'
 const BASE = process.env.E2E_URL || 'http://localhost:8930'
 const browser = await (process.env.E2E_BROWSER === 'webkit'
   ? webkit.launch()
-  : chromium.launch({
-      executablePath: 'C:/Users/wangqixiu/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe',
-    }))
+  : chromium.launch({ executablePath: process.env.CHROME_PATH || undefined }))
 const results = []
 const check = (name, ok, detail = '') => {
   results.push([ok ? 'PASS' : 'FAIL', name, detail])
@@ -33,7 +31,7 @@ async function fresh(seed) {
         'gym_gym_v1',
         JSON.stringify({
           state: { settings: { restSec: 90, sound: true, vibrate: true, showRir: true }, ...s },
-          version: 9,
+          version: 5,
         })
       )
     }, seed)
@@ -252,8 +250,15 @@ function page2count(p, sel) {
   check('E3 配重卡', await p.isVisible('text=杠铃配重'))
   check('E4 备份按钮', await p.isVisible('text=导出备份'))
   check('E5 安装卡（浏览器态显示按钮）', await p.isVisible('text=📲 添加到主屏幕'))
-  // 连接假地址 → 友好报错
-  await p.fill('input[placeholder*="服务器地址"]', 'https://example.invalid')
+  // 模拟服务不可用，避免 DNS/跨域错误在不同引擎产生不一致的浏览器事件。
+  await p.evaluate(() => {
+    const original = window.fetch.bind(window)
+    window.fetch = (url, options) =>
+      String(url).includes('/unavailable/')
+        ? Promise.reject(new TypeError('offline'))
+        : original(url, options)
+  })
+  await p.fill('input[placeholder*="服务器地址"]', BASE + '/unavailable')
   await p.fill('input[placeholder*="昵称"]', '矩阵测试')
   await p.locator('button:has-text("连接")').last().click()
   await p.waitForTimeout(900)
@@ -267,7 +272,6 @@ function page2count(p, sel) {
     ).includes('无法连接')
   )
   await p.close()
-  errors.length = 0 // E6 故意连假地址的预期网络错误不计入后续健壮性检查
 }
 
 /* ============ F. 脏数据健壮性 ============ */
@@ -327,6 +331,105 @@ for (const [w, h, name] of [
   await p.close()
 }
 
+/* ============ H. 数据可靠性回归 ============ */
+{
+  const p = await fresh({})
+  await p.locator('.start-card').first().click()
+  await p.locator('.workout-head button:has-text("完成")').click()
+  check(
+    'H1 空训练完成后保留草稿',
+    await p.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+      return !!state.active && state.workouts.length === 0
+    })
+  )
+  await p.locator('.done-btn').first().click()
+  await p.click('.tabbar >> text=计划')
+  check('H2 计划页也显示休息计时', await p.isVisible('.restbar'))
+  await p.click('.tabbar >> text=设置')
+  await p.locator('input[type="file"]').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        app: 'gym-gym',
+        workouts: [],
+        bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 75 }],
+      })
+    ),
+  })
+  await p.getByRole('button', { name: '确认导入' }).waitFor()
+  check(
+    'H3 导入先预览，不立即替换',
+    (await p.isVisible('text=确认导入')) &&
+      (await p.evaluate(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.active))
+  )
+  await p.click('button:has-text("确认导入")')
+  await p.click('button:has-text("恢复上次数据")')
+  check(
+    'H4 恢复点能恢复导入前的训练',
+    await p.evaluate(() => !!JSON.parse(localStorage.getItem('gym_gym_v1')).state.active)
+  )
+  await p.close()
+}
+
+{
+  const p = await fresh({})
+  // UI 冲突测试直接模拟 fetch，避免各平台 WebKit 对跨域预检拦截的差异。
+  // 真实 HTTP 路由和版本校验另由 backend/worker.test.js 覆盖。
+  await p.evaluate(() => {
+    const original = window.fetch.bind(window)
+    window.fetch = (url, options) => {
+      if (!String(url).startsWith('https://sync.test/')) return original(url, options)
+      const data =
+        String(url).endsWith('/api/data') && (!options?.method || options.method === 'GET')
+          ? { rev: 2, state: { workouts: [], bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 80 }] } }
+          : {}
+      return Promise.resolve(
+        new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
+      )
+    }
+  })
+  await p.fill('form input', '72')
+  await p.click('button:has-text("记录")')
+  await p.click('.tabbar >> text=设置')
+  await p.fill('input[placeholder*="服务器地址"]', 'https://sync.test')
+  await p.fill('input[placeholder*="令牌"]', 'audit.token')
+  await p.getByRole('button', { name: '连接', exact: true }).click()
+  await p.getByRole('button', { name: '采纳云端数据' }).waitFor()
+  check(
+    'H5 首次连接冲突保留本机数据',
+    await p.evaluate(() => JSON.parse(localStorage.getItem('gym_gym_v1')).state.bodyweight[0].kg === 72)
+  )
+  await p.getByRole('button', { name: '采纳云端数据' }).click()
+  check(
+    'H6 采纳云端后可恢复本机记录',
+    await p.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem('gym_gym_v1')).state
+      return (
+        state.bodyweight[0].kg === 80 &&
+        JSON.parse(state.recovery.json).bodyweight[0].kg === 72 &&
+        !state.sync.dirty
+      )
+    })
+  )
+  await p.close()
+}
+
+{
+  const p = await fresh()
+  await p.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 10000 })
+  await p.context().setOffline(true)
+  await p.click('.tabbar >> text=历史')
+  await p.locator('.bm-v').first().waitFor()
+  check('H7 首次进入历史页可离线加载肌肉图', (await p.locator('.bm-v').count()) === 2)
+  await p.reload({ waitUntil: 'domcontentloaded' })
+  await p.locator('.bm-v').first().waitFor()
+  check('H8 离线刷新保留应用外壳与懒加载模块', (await p.textContent('h1')) === '历史')
+  await p.context().setOffline(false)
+  await p.close()
+}
+
 await browser.close()
 const fails = results.filter(r => r[0] === 'FAIL')
 console.log('========== 测试矩阵 ==========')
@@ -343,4 +446,4 @@ if (errors.length) {
   console.log('页面错误:')
   errors.slice(0, 5).forEach(e => console.log(' ' + e))
 } else console.log('零控制台错误')
-process.exit(0)
+process.exit(fails.length || errors.length ? 1 : 0)

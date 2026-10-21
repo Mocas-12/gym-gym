@@ -1,6 +1,5 @@
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import RestTimer from '../components/RestTimer.jsx'
 import { workoutVolume } from '../lib/workout.js'
 import { todayPlan, nextAssigned, WEEKDAY_CN } from '../lib/plan.js'
 
@@ -44,7 +43,6 @@ export default function Home() {
 
   return (
     <div className="page">
-      <RestTimer />
       <h1 className="h1">GymGym</h1>
       <p className="sub">
         {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}

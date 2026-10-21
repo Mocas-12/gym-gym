@@ -95,7 +95,7 @@ flowchart LR
 4. **休息计时**：倒计时存的是时间戳而非递减计数器，重渲染后依然准确；结束时通过 WebAudio 蜂鸣并调用 `navigator.vibrate` 震动
 5. **PR 规则**：`lib/onerm.js` 对每组计算 Epley 估算 1RM；只有「曾有过记录且这次更好」才记 PR——新动作的第一次只建立基线
 6. **脏数据防线**：所有写入口（存储恢复、云端采纳、导入、服务器 PUT）都汇入 `lib/normalize.js` 净化，畸形记录再也不可能弄崩历史页
-7. **可选同步**：推送带 `baseRev` 条件写，冲突（409）按「最后改动时间」新者胜。不连接就完全离线使用，连接后也随时可断开
+7. **可选同步**：同步带 `baseRev` 条件写，冲突（409）保留双方数据，由用户选择要保留的一份。不连接就完全离线使用，连接后也随时可断开
 
 ## 📁 项目结构
 
@@ -112,11 +112,11 @@ gym-gym/
 │   ├── gen-icons.mjs        # 纯 Node PNG 编码器 → 应用图标
 │   ├── inject-precache.mjs  # 构建后把带 hash 的资产清单注入 sw.js 预缓存
 │   ├── deploy.mjs           # 构建 + 把 dist/ 孤儿提交推到 gh-pages
-│   └── deploy-backend.mjs   # 从 docs/SYNC_PUSH.md 提取 Worker → wrangler deploy
+│   └── deploy-backend.mjs   # 直接部署 backend/worker.js（含 Durable Object）
 ├── backend/
 │   ├── wrangler.toml        # 可选微后端配置（KV 绑定、来源白名单、VAPID）
 │   └── worker.test.js       # 全链路测试：同步、RFC 8291 推送往返、限流、诊断
-├── docs/SYNC_PUSH.md        # 可选同步/推送指南 + Worker 源码（唯一规范源）
+├── docs/SYNC_PUSH.md        # 可选同步/推送指南及升级说明
 ├── src/
 │   ├── main.jsx / App.jsx   # hash 路由标签页：首页 / 训练 / 计划 / 历史 / 设置
 │   ├── store/
@@ -138,7 +138,7 @@ gym-gym/
 │   │   └── *.test.js
 │   ├── components/          # TabBar / RestTimer / ExercisePicker / BodyMap / ErrorBoundary / …
 │   └── views/               # Home / WorkoutView / PlanView / HistoryView / SettingsView / SyncCard
-├── e2e-full.mjs             # Playwright E2E 矩阵：46 项 × Chromium/WebKit
+├── e2e-full.mjs             # Playwright E2E 矩阵：完整 × Chromium/WebKit
 └── smoke.mjs                # 快速 Playwright 冒烟（本地预览或线上 URL）
 ```
 
@@ -155,7 +155,7 @@ npm run dev
 | 命令 | 说明 |
 | --- | --- |
 | `npm run dev` | Vite 开发服务器，热更新 |
-| `npm test` | 73 个单测（领域逻辑 + 可选 Worker） |
+| `npm test` | 完整单测（领域逻辑 + 可选 Worker） |
 | `npm run test:coverage` | 单测 + 覆盖率门槛（lib 层 ≥ 85%） |
 | `npm run lint` / `npm run format` | ESLint / Prettier |
 | `npm run typecheck` | 对 `src/lib` 做严格 JSDoc 类型检查 |
@@ -163,7 +163,9 @@ npm run dev
 | `npm run deploy` | 构建 + 发布到 GitHub Pages（gh-pages 分支） |
 | `npm run backend:deploy` | 部署可选同步/推送 Worker（[docs/SYNC_PUSH.md](./docs/SYNC_PUSH.md)） |
 
-每次推送 CI 都会跑：lint → 格式检查 → 类型检查 → 覆盖率门槛 → 构建 → Lighthouse 审计（性能/无障碍/最佳实践/SEO 四类高分门槛）。发布刻意保持简单：`npm run deploy` 把 `dist/` 以孤儿提交推到 `gh-pages` 分支（Pages 源指向它），改完跑一下线上即更新。
+导入备份先预览数量，确认后替换。删除、编辑、清空或采纳云端前保存一份本地恢复点；覆盖云端时保留云端副本。恢复点只保留最近一份，不能代替导出备份。
+
+每次推送 CI 都会跑：lint → 格式检查 → 类型检查 → 覆盖率门槛 → 构建 → Chromium/WebKit E2E → Lighthouse 审计（性能/无障碍/最佳实践/SEO 四类高分门槛）。发布刻意保持简单：`npm run deploy` 把 `dist/` 以孤儿提交推到 `gh-pages` 分支（Pages 源指向它），改完跑一下线上即更新。
 
 ## 📱 iPhone 安装
 
@@ -175,7 +177,7 @@ npm run dev
 
 ## ☁️ 可选同步与推送
 
-GymGym 默认完全离线使用。想要更多，部署你自己的微后端（一个 Cloudflare Worker + KV，免费额度足够）即可获得：
+GymGym 默认完全离线使用。想要更多，部署你自己的微后端（一个 Cloudflare Worker + KV + SQLite Durable Object，免费额度足够）即可获得：
 
 - **多设备同步**——每用户一份 JSON 文档，修订号条件写，冲突安全
 - **Web Push 休息提醒**——页面在后台被冻结也能收到休息结束通知（iPhone 自动镜像到 Apple Watch）
@@ -195,11 +197,11 @@ GymGym 默认完全离线使用。想要更多，部署你自己的微后端（�
 ## 🧪 测试
 
 ```bash
-npm test                # 73 个单测——领域逻辑（1RM、容量、PR、渐进引擎、
+npm test                # 完整单测——领域逻辑（1RM、容量、PR、渐进引擎、
                         # 热力图、肌肉地图、配重、计划）+ Worker（同步、
                         # RFC 8291 推送往返、限流、诊断）
-npm run test:coverage   # + 覆盖率门槛：src/lib 语句/分支/函数/行 ≥ 85%
-node e2e-full.mjs       # 46 项 E2E 矩阵 × Chromium 与 WebKit（先 build + preview）
+npm run test:coverage   # + 覆盖率门槛：src/lib 语句/函数/行 ≥ 85%，分支 ≥ 78%
+npm run test:e2e        # 完整 E2E 矩阵 × Chromium 与 WebKit（先 build，自动启动预览）
 npm run smoke           # 快速 Playwright 冒烟
 ```
 
@@ -240,7 +242,7 @@ E2E 矩阵走遍每个视图——引导训练、计划编辑、历史编辑、�
 ## 🔒 隐私与安全
 
 - 🏋️ 默认全部数据存在你浏览器的 `localStorage`——**从不上传任何地方**
-- 🚫 同步关闭时，应用运行时**零网络请求**：无统计、无 CDN 调用、无账号、无追踪
+- 🚫 同步关闭时，应用运行时**无第三方数据请求**：无统计、无 CDN 调用、无账号、无追踪
 - ☁️ 连接同步后，数据只发往**你自己部署**、跑在**你自己 Cloudflare 账号**里的 Worker，使用你自己掌控的 Bearer 令牌
 - 🩺 诊断信息（崩溃消息/栈、app 版本、Service Worker 状态）**只在同步连接时**上报到同一个后端——永不含训练数据；断开即停止上报
 - 📦 备份是你自己手动导出的 JSON 文件，保存在你自己手里

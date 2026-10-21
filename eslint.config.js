@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import prettier from 'eslint-config-prettier'
 
 export default [
-  { ignores: ['dist', 'coverage', 'node_modules', 'backend/.worker-under-test.mjs'] },
+  { ignores: ['dist', 'coverage', 'node_modules', '**/.wrangler/**', 'backend/.worker-under-test.mjs'] },
   {
     files: ['**/*.{js,mjs,jsx}'],
     languageOptions: {

@@ -2,11 +2,12 @@
 // @ts-check
 import { best1RM } from './onerm.js'
 import { MUSCLES } from '../data/exercises.js'
+import { localDate } from './dates.js'
 
 const DAY = 86400000
 
 /** @param {number} ts @returns {string} YYYY-MM-DD */
-const dayKey = ts => new Date(ts).toISOString().slice(0, 10)
+const dayKey = ts => localDate(ts)
 
 /**
  * 某动作按时间排序的估计 1RM 序列（同一天取最高）。
@@ -66,11 +67,13 @@ export function heatmap(workouts, days = 364, now = Date.now()) {
   }
   /** @type {{ d: string, v: number }[]} */
   const out = []
-  const start = new Date(now - (days - 1) * DAY)
+  const start = new Date(now)
+  start.setDate(start.getDate() - days + 1)
   start.setHours(12, 0, 0, 0)
   for (let i = 0; i < days; i++) {
-    const d = new Date(start.getTime() + i * DAY)
-    const k = d.toISOString().slice(0, 10)
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    const k = localDate(d)
     out.push({ d: k, v: Math.round(byDay[k] || 0) })
   }
   return out

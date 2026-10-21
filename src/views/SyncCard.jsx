@@ -10,6 +10,7 @@ export default function SyncCard() {
   const setSync = useStore(s => s.setSync)
   const syncNow = useStore(s => s.syncNow)
   const adoptRemote = useStore(s => s.adoptRemote)
+  const resolveConflict = useStore(s => s.resolveConflict)
   const toast = useUI(s => s.toast)
   const [url, setUrl] = useState(sync.url)
   const [token, setToken] = useState(sync.token)
@@ -47,8 +48,15 @@ export default function SyncCard() {
         toast('连接失败：' + (pull.data.error || pull.status))
         return
       }
-      if (pull.data.state) adoptRemote(pull.data.state, pull.data.rev)
-      setSync({ url: base, token: tok, rev: pull.data.rev || 0, lastSync: Date.now() })
+      const dirty = useStore.getState().sync.dirty
+      setSync({ url: base, token: tok, rev: pull.data.rev || 0, lastSync: 0, dirty })
+      if (pull.data.state) {
+        if (dirty) setSync({ conflict: { rev: pull.data.rev, state: pull.data.state }, status: 'conflict' })
+        else adoptRemote(pull.data.state, pull.data.rev)
+      } else {
+        setSync({ dirty: true })
+        await syncNow()
+      }
       toast('已连接，同步已开启')
     } finally {
       setBusy(false)
@@ -155,12 +163,54 @@ export default function SyncCard() {
           <div className="row-between">
             <span>状态</span>
             <span className="dim small mono">
-              已连接
+              {sync.conflict
+                ? '同步冲突，等待选择'
+                : sync.status === 'syncing'
+                  ? '同步中…'
+                  : sync.status === 'error'
+                    ? '同步失败，可重试'
+                    : sync.dirty
+                      ? '本地有数据待上传'
+                      : '已同步'}
               {sync.lastSync
                 ? ` · ${new Date(sync.lastSync).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 同步`
                 : ''}
             </span>
           </div>
+          {sync.conflict && (
+            <div role="status">
+              <p className="small">
+                本机和云端都有修改，已保留两份。选择要保留的数据；采纳云端前会保存本机恢复点。
+              </p>
+              <div className="row">
+                <button
+                  className="btn ghost"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      const result = await resolveConflict('local')
+                      toast(result === 'synced' ? '已保留本机数据并同步' : '未完成同步，请重试')
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  保留本机并上传
+                </button>
+                <button
+                  className="btn ghost"
+                  disabled={busy || !sync.conflict.state}
+                  onClick={() => {
+                    resolveConflict('remote')
+                    toast('已采纳云端，可通过恢复点撤销')
+                  }}
+                >
+                  采纳云端数据
+                </button>
+              </div>
+            </div>
+          )}
           <div className="row">
             <button className="btn primary grow" disabled={busy} onClick={doSync}>
               立即同步

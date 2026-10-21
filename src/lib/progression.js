@@ -17,7 +17,7 @@ export const SCHEMES = [
   { id: 'time', name: '计时递增' },
 ]
 
-/** @returns {import('./types.js').ProgressionCfg} */
+/** @returns {Required<import('./types.js').ProgressionCfg>} */
 export const DEFAULT_CFG = () => ({
   scheme: 'double',
   inc: 2.5,
@@ -53,7 +53,8 @@ export function sessionsOf(workouts, exId, n = 2) {
     const e = (w.entries || []).find(x => x?.exId === exId)
     const sets = e
       ? (e.sets || []).filter(
-          s => s.done && (((s.kg ?? 0) > 0 && ((s.reps ?? 0) > 0 || s.reps == null)) || (s.sec ?? 0) > 0)
+          s =>
+            s.done && !s.w && (((s.kg ?? 0) > 0 && ((s.reps ?? 0) > 0 || s.reps == null)) || (s.sec ?? 0) > 0)
         )
       : null
     if (sets && sets.length) {

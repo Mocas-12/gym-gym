@@ -13,8 +13,11 @@
  * @returns {Promise<ApiResponse>}
  */
 const jsonFetch = async (url, { method = 'GET', token = '', body } = {}) => {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
   try {
     const res = await fetch(url, {
+      signal: controller.signal,
       method,
       headers: {
         'content-type': 'application/json',
@@ -26,6 +29,8 @@ const jsonFetch = async (url, { method = 'GET', token = '', body } = {}) => {
     return { ok: res.ok, status: res.status, data }
   } catch {
     return { ok: false, status: 0, data: { error: '无法连接服务器（检查地址和网络）' } }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
@@ -39,7 +44,7 @@ export const pullData = (url, token) => jsonFetch(url.replace(/\/$/, '') + '/api
 /**
  * @param {string} url
  * @param {string} token
- * @param {number|null} baseRev 条件写基线；null=无条件覆盖
+ * @param {number} baseRev 必须匹配当前云端修订号
  * @param {any} state
  * @returns {Promise<ApiResponse<{ rev?: number, wid?: string, ts?: number, error?: string, state?: any }>>}
  */

@@ -11,3 +11,11 @@ VAPID_SUB = "https://mocas-12.github.io/gym-gym/"
 [[kv_namespaces]]
 binding = "KV"
 id = "5f30a96dc60740ed9a155b993744145a"
+
+[[durable_objects.bindings]]
+name = "USERS"
+class_name = "GymUser"
+
+[[migrations]]
+tag = "v1-users"
+new_sqlite_classes = ["GymUser"]
