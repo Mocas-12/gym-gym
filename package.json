@@ -1,7 +1,7 @@
 {
   "name": "gym-gym",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc -p tsconfig.json",
     "smoke": "node smoke.mjs",
+    "test:e2e": "node scripts/e2e.mjs",
     "deploy": "node scripts/deploy.mjs",
     "backend:deploy": "node scripts/deploy-backend.mjs"
   },

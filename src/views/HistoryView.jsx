@@ -5,6 +5,7 @@ import { e1rmSeries, trainedExercises, heatmap } from '../lib/insights.js'
 import { regionLoad, volumeLevels, recoveryLevels, neglectedLevels } from '../lib/muscles.js'
 import { Heatmap, LineChart } from '../components/Charts.jsx'
 import BodyMap from '../components/BodyMap.jsx'
+import { isThisMonth } from '../lib/dates.js'
 import WorkoutEdit from '../components/WorkoutEdit.jsx'
 
 const fmtSet = (e, s) => {
@@ -73,10 +74,8 @@ export default function HistoryView() {
     return Object.values(best).sort((a, b) => b.e1rm - a.e1rm)
   }, [workouts])
 
-  const monthCount = list.filter(w => new Date(w.start).getMonth() === new Date().getMonth()).length
-  const monthVolume = list
-    .filter(w => new Date(w.start).getMonth() === new Date().getMonth())
-    .reduce((s, w) => s + (w.volume || 0), 0)
+  const monthCount = list.filter(w => isThisMonth(w.start)).length
+  const monthVolume = list.filter(w => isThisMonth(w.start)).reduce((s, w) => s + (w.volume || 0), 0)
 
   return (
     <div className="page">

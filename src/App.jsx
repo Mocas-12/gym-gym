@@ -7,6 +7,7 @@ import SettingsView from './views/SettingsView.jsx'
 import TabBar from './components/TabBar.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { useUI } from './store/useUI.js'
+import RestTimer from './components/RestTimer.jsx'
 
 const TABS = ['home', 'workout', 'plan', 'history', 'settings']
 const readHash = () => {
@@ -36,6 +37,7 @@ export default function App() {
           {route === 'settings' && <SettingsView />}
         </ErrorBoundary>
       </main>
+      <RestTimer />
       <TabBar
         route={route}
         go={r => {

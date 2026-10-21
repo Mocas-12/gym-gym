@@ -1,7 +1,12 @@
 /* 极简 Service Worker：导航请求网络优先（发新版即拿到最新），静态资源缓存优先。
  * 目的有二：让 Android/Chrome 满足可安装条件（触发原生安装框），以及离线打开。 */
 /* global PRECACHE_LIST */
-const CACHE = 'gym-gym-v2'
+const CACHE = 'gym-gym-v3'
+const PRECACHED = new Set(
+  (typeof PRECACHE_LIST !== 'undefined' ? PRECACHE_LIST : []).map(
+    path => new URL(path, self.location.href).href
+  )
+)
 
 self.addEventListener('install', e =>
   e.waitUntil(
@@ -42,7 +47,9 @@ self.addEventListener('activate', e =>
   e.waitUntil(
     caches
       .keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys =>
+        Promise.all(keys.filter(k => k.startsWith('gym-gym-') && k !== CACHE).map(k => caches.delete(k)))
+      )
       .then(() => self.clients.claim())
   )
 )
@@ -99,7 +106,8 @@ self.addEventListener('fetch', e => {
     return
   }
   e.respondWith(
-    caches.match(e.request).then(
+    // 应用静态资源内容固定；预缓存 fetch 与模块、manifest 请求的 Origin 头可能不同。
+    caches.match(e.request, { ignoreVary: PRECACHED.has(url.href) }).then(
       hit =>
         hit ||
         fetch(e.request).then(res => {

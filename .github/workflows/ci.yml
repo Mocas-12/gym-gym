@@ -20,6 +20,24 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
 
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+      - run: npm run test:e2e
+        env:
+          E2E_BROWSER: ${{ matrix.browser }}
+
   lighthouse:
     runs-on: ubuntu-latest
     steps:

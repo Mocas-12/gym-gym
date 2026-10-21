@@ -3,8 +3,9 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import SchemeRow from './SchemeRow.jsx'
+import { localDate } from '../lib/dates.js'
 
-const dateStrOf = ts => new Date(ts).toISOString().slice(0, 10)
+const dateStrOf = ts => localDate(ts)
 const newId = () =>
   'bk' + [...crypto.getRandomValues(new Uint8Array(5))].map(x => x.toString(16).padStart(2, '0')).join('')
 

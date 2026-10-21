@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
-import RestTimer from '../components/RestTimer.jsx'
 import ExercisePicker from '../components/ExercisePicker.jsx'
 import SetRow from '../components/SetRow.jsx'
 import SchemeRow from '../components/SchemeRow.jsx'
@@ -114,7 +113,6 @@ export default function WorkoutView() {
 
   return (
     <div className="page workout-page">
-      <RestTimer />
       <div className="workout-head">
         <div>
           <div className="h2">{active.name}</div>

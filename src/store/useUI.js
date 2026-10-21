@@ -29,30 +29,36 @@ export const useUI = create((set, get) => ({
   restLabel: '',
   toastMsg: '',
   restPushId: null,
+  restGeneration: 0,
   startRest(sec, label = '') {
+    get().stopRest()
+    const generation = get().restGeneration
     set({ restUntil: Date.now() + sec * 1000, restLabel: label })
     // 已配置云同步 → 服务器定时推送（手表随 iPhone 镜像），页面被冻结也能收到
     const { sync } = useStore.getState()
     if (sync.url && sync.token && sec >= 30) {
       restPush(sync.url, sync.token, sec, label).then(r => {
-        if (r?.id) set({ restPushId: r.id })
+        if (!r?.id) return
+        if (get().restGeneration !== generation) restPushCancel(sync.url, sync.token, r.id)
+        else set({ restPushId: r.id })
       })
     }
   },
   addRest(sec) {
-    set({ restUntil: Math.max(get().restUntil, Date.now()) + sec * 1000 })
+    const until = Math.max(get().restUntil, Date.now()) + sec * 1000
+    get().startRest(Math.ceil((until - Date.now()) / 1000), get().restLabel)
   },
   stopRest() {
     const { sync } = useStore.getState()
     const { restPushId } = get()
     if (restPushId) restPushCancel(sync.url, sync.token, restPushId)
-    set({ restUntil: 0, restLabel: '', restPushId: null })
+    set({ restUntil: 0, restLabel: '', restPushId: null, restGeneration: get().restGeneration + 1 })
   },
   finishRest() {
     const { settings } = useStore.getState()
     if (settings.vibrate && navigator.vibrate) navigator.vibrate([180, 90, 180, 90, 320])
     if (settings.sound) beep(3)
-    set({ restUntil: 0, restLabel: '' })
+    get().stopRest()
   },
   toast(msg) {
     set({ toastMsg: msg })

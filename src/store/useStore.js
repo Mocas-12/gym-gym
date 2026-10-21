@@ -6,8 +6,9 @@ import { EXERCISES } from '../data/exercises.js'
 import { PRESET_ROUTINES } from '../data/routines.js'
 import { finalizeWorkout, prefillFor, withStats } from '../lib/workout.js'
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
-import { pushData } from '../lib/sync.js'
+import { pushData, pullData } from '../lib/sync.js'
 import { normalizeState } from '../lib/normalize.js'
+import { localDate } from '../lib/dates.js'
 
 /* 启动自愈（第一优先）：store 初始化之前就把持久层里的脏数据洗掉。
  * 此前只清洗内存态、写回比较时机有 bug，导致脏数据长期滞留在存储里反复引发崩溃。 */
@@ -16,9 +17,9 @@ try {
   if (raw) {
     const doc = JSON.parse(raw)
     if (doc && doc.state) {
-      const before = Array.isArray(doc.state.workouts) ? doc.state.workouts.length : -1
+      const before = JSON.stringify(doc.state)
       normalizeState(doc.state)
-      if (Array.isArray(doc.state.workouts) && doc.state.workouts.length !== before) {
+      if (JSON.stringify(doc.state) !== before) {
         localStorage.setItem('gym_gym_v1', JSON.stringify(doc))
       }
     }
@@ -33,7 +34,7 @@ const uid = () =>
     .map(x => x.toString(16).padStart(2, '0'))
     .join('')
     .slice(0, 11)
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => localDate()
 
 /* 超级组：routine.supersets 是按相邻行分组的多组数组（如 [['bench','ohp']]）。
  * 组内动作在训练里交替做。编辑器里用「与上一个同组」开关维护。 */
@@ -42,8 +43,11 @@ const supIndexOf = (routine, exId) => {
   return i >= 0 ? i : null
 }
 
-/* 本机最后一次数据改动时间：云同步冲突时判断「双方都有改动」用 */
-let lastChangeAt = 0
+/* 修改序号识别请求期间的新改动；dirty 随数据持久化，重启后仍会补传。 */
+let changeVersion = 0
+let connectionVersion = 0
+let inFlight = null
+const DATA_KEYS = ['settings', 'customEx', 'routines', 'plan', 'workouts', 'bodyweight']
 
 export const useStore = create(
   persist(
@@ -52,7 +56,17 @@ export const useStore = create(
       customEx: [], // 用户自建练习
       routines: PRESET_ROUTINES,
       plan: { mode: 'week', week: { 1: 'push', 3: 'pull', 5: 'legs' }, rotation: ['push', 'pull', 'legs'] },
-      sync: { url: '', token: '', uid: '', rev: 0, lastSync: 0 },
+      sync: {
+        url: '',
+        token: '',
+        uid: '',
+        rev: 0,
+        lastSync: 0,
+        dirty: false,
+        conflict: null,
+        status: 'idle',
+      },
+      recovery: null,
       workouts: [], // {id, d, name, rid, start, end, entries, volume, prs}
       bodyweight: [], // {d, t, kg}
       active: null, // 进行中的训练，结构同 workouts 条目
@@ -65,7 +79,12 @@ export const useStore = create(
         if (t) {
           const n = t.sets || 3
           return {
-            sets: Array.from({ length: n }, () => ({ kg: t.kg, reps: t.reps, done: false })),
+            sets: Array.from({ length: n }, () => ({
+              kg: t.kg,
+              reps: t.reps,
+              ...(t.sec != null ? { sec: t.sec } : {}),
+              done: false,
+            })),
             note: t.note,
           }
         }
@@ -239,60 +258,111 @@ export const useStore = create(
         if (!cur) return null
         const others = get().workouts.filter(w => w?.id !== id)
         const clean = withStats({ ...cur, ...patch, id }, others)
+        if (!clean.entries.length) return null
+        get().saveRecovery('编辑训练')
         set({ workouts: [clean, ...others].sort((a, b) => b.start - a.start) })
         return clean
       },
 
-      /* ---- 云同步（可选微后端，见 docs/SYNC_PUSH.md）----
-       * 文档级 LWW：push 带 baseRev，409 时按「最后改动时间」新者胜。 */
+      /* 冲突保留双方文档，用户明确选择后才替换。 */
       setSync(patch) {
-        set({ sync: { ...get().sync, ...patch } })
+        const old = get().sync
+        const changed =
+          (patch.url != null && patch.url !== old.url) || (patch.token != null && patch.token !== old.token)
+        if (changed) connectionVersion++
+        set({ sync: { ...old, ...(changed ? { conflict: null, status: 'idle' } : {}), ...patch } })
       },
       adoptRemote(state, rev) {
         const cur = get()
         const clean = normalizeState({ ...state })
+        get().saveRecovery('采纳云端数据')
         set({
-          settings: { restSec: 90, sound: true, vibrate: true, showRir: true, ...state.settings },
+          settings: { restSec: 90, sound: true, vibrate: true, showRir: true, ...clean.settings },
           customEx: clean.customEx,
-          routines: (clean.routines || []).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r })),
-          plan: state.plan || cur.plan,
+          routines: (clean.routines || []).map(r => ({
+            supersets: [],
+            ...r,
+            cfg: { ...DEFAULT_CFG(), ...r.cfg },
+          })),
+          plan: clean.plan || cur.plan,
           workouts: clean.workouts,
           bodyweight: clean.bodyweight,
-          sync: { ...cur.sync, rev, lastSync: Date.now() },
+          sync: { ...cur.sync, rev, lastSync: Date.now(), dirty: false, conflict: null, status: 'synced' },
         })
+        get().setSync({ dirty: false })
       },
       async syncNow() {
         const s = get().sync
         if (!s.url || !s.token) return 'off'
-        // active（进行中的训练）是设备本地的，不上云
-        const { active: _active, sync: _s, ...doc } = get()
-        const snapshot = { ...doc, _ts: Date.now() }
-        const r = await pushData(s.url, s.token, s.rev, snapshot)
-        if (r.ok) {
-          get().setSync({ rev: r.data.rev, lastSync: Date.now() })
-          return 'synced'
-        }
-        if (r.status !== 409) return 'error'
-        // 冲突：另一台设备写过。本机无未同步改动 → 直接采纳云端；
-        // 双方都有改动 → 谁最后改动谁胜（文档级 LWW）。
-        const server = r.data
-        const dirty = lastChangeAt > s.lastSync
-        if (!dirty) {
-          if (server.state) get().adoptRemote(server.state, server.rev)
-          else get().setSync({ rev: server.rev, lastSync: Date.now() })
-          return 'adopted'
-        }
-        if ((snapshot._ts || 0) >= (server.state?._ts || 0)) {
-          const f = await pushData(s.url, s.token, server.rev, snapshot)
-          if (f.ok) {
-            get().setSync({ rev: f.data.rev, lastSync: Date.now() })
-            return 'overwritten'
+        if (s.conflict) return 'conflict'
+        if (inFlight) return inFlight
+        const version = changeVersion
+        const connection = connectionVersion
+        const currentConnection = () =>
+          connectionVersion === connection && get().sync.url === s.url && get().sync.token === s.token
+        get().setSync({ status: 'syncing' })
+        inFlight = (async () => {
+          try {
+            if (!s.dirty) {
+              const r = await pullData(s.url, s.token)
+              if (!currentConnection()) return 'off'
+              if (!r.ok) {
+                get().setSync({ status: 'error' })
+                return 'error'
+              }
+              if (r.data.rev !== s.rev && r.data.state) {
+                if (version !== changeVersion) {
+                  get().setSync({ conflict: { rev: r.data.rev, state: r.data.state }, status: 'conflict' })
+                  return 'conflict'
+                }
+                get().adoptRemote(r.data.state, r.data.rev)
+                return 'adopted'
+              }
+              get().setSync({ lastSync: Date.now(), status: 'synced' })
+              return 'synced'
+            }
+            const snapshot = Object.fromEntries(DATA_KEYS.map(key => [key, get()[key]]))
+            const r = await pushData(s.url, s.token, s.rev, snapshot)
+            if (!currentConnection()) return 'off'
+            if (r.ok) {
+              get().setSync({
+                rev: r.data.rev,
+                lastSync: Date.now(),
+                dirty: version !== changeVersion,
+                status: 'synced',
+              })
+              return 'synced'
+            }
+            if (r.status === 409) {
+              get().setSync({ conflict: { rev: r.data.rev, state: r.data.state }, status: 'conflict' })
+              return 'conflict'
+            }
+            get().setSync({ status: 'error' })
+            return 'error'
+          } catch {
+            if (currentConnection()) get().setSync({ status: 'error' })
+            return 'error'
+          } finally {
+            inFlight = null
           }
-        } else {
-          if (server.state) get().adoptRemote(server.state, server.rev)
-          return 'adopted'
+        })()
+        return inFlight
+      },
+      resolveConflict(choice) {
+        const conflict = get().sync.conflict
+        if (!conflict) return
+        if (choice === 'remote' && conflict.state) get().adoptRemote(conflict.state, conflict.rev)
+        else if (choice === 'local') {
+          set({
+            recovery: {
+              json: JSON.stringify({ ...conflict.state, app: 'gym-gym', version: 2 }),
+              reason: '覆盖云端数据',
+              at: Date.now(),
+            },
+          })
+          get().setSync({ rev: conflict.rev, conflict: null, dirty: true, status: 'idle' })
+          return get().syncNow()
         }
-        return 'conflict'
       },
 
       /* ---- 计划与模板 ---- */
@@ -315,6 +385,7 @@ export const useStore = create(
         const { active, workouts } = get()
         if (!active) return null
         const { workout } = finalizeWorkout(active, workouts)
+        if (!workout) return null
         set({ workouts: [workout, ...workouts], active: null })
         return workout
       },
@@ -322,6 +393,7 @@ export const useStore = create(
         set({ active: null })
       },
       deleteWorkout(id) {
+        get().saveRecovery('删除训练')
         set({ workouts: get().workouts.filter(w => w.id !== id) })
       },
 
@@ -360,27 +432,38 @@ export const useStore = create(
       },
       importState(json) {
         const d = JSON.parse(json)
-        if (d.app !== 'gym-gym') throw new Error('不是 gym-gym 的备份文件')
+        if (!d || d.app !== 'gym-gym' || Array.isArray(d)) throw new Error('不是 gym-gym 的备份文件')
         const clean = normalizeState(d)
+        get().saveRecovery('导入备份')
         set({
-          settings: { ...get().settings, ...d.settings },
+          settings: { ...get().settings, ...clean.settings },
           customEx: clean.customEx,
           routines: (clean.routines || PRESET_ROUTINES).map(r => ({
-            cfg: DEFAULT_CFG(),
             supersets: [],
             ...r,
+            cfg: { ...DEFAULT_CFG(), ...r.cfg },
           })),
-          plan: d.plan || {
+          plan: clean.plan || {
             mode: 'week',
             week: { 1: 'push', 3: 'pull', 5: 'legs' },
             rotation: ['push', 'pull', 'legs'],
           },
           workouts: clean.workouts,
           bodyweight: clean.bodyweight,
-          active: d.active || null,
+          active: clean.active || null,
         })
       },
+      saveRecovery(reason) {
+        set({ recovery: { json: get().exportState(), reason, at: Date.now() } })
+      },
+      restoreRecovery() {
+        const recovery = get().recovery
+        if (!recovery) return false
+        get().importState(recovery.json)
+        return true
+      },
       resetAll() {
+        get().saveRecovery('清空数据')
         set({
           settings: { restSec: 90, sound: true, vibrate: true },
           customEx: [],
@@ -403,10 +486,10 @@ export const useStore = create(
     }),
     {
       name: 'gym_gym_v1',
-      version: 4,
+      version: 5,
       /* v1→v2：补 plan 与 routine 的 cfg/supersets；v3：清洗脏数据——
        * 真机上曾出现 workouts 数组混入 null 导致历史页崩溃（ErrorBoundary 兜住）。
-       * v4：加云同步配置。 */
+       * v4：加云同步配置；v5：持久化待同步标记与恢复点。 */
       migrate: (p, ver) => {
         if (ver < 2) {
           p.plan = p.plan || {
@@ -414,16 +497,18 @@ export const useStore = create(
             week: { 1: 'push', 3: 'pull', 5: 'legs' },
             rotation: ['push', 'pull', 'legs'],
           }
-          p.routines = (p.routines || PRESET_ROUTINES).map(r => ({ cfg: DEFAULT_CFG(), supersets: [], ...r }))
+          p.routines = (Array.isArray(p.routines) ? p.routines : PRESET_ROUTINES)
+            .filter(Boolean)
+            .map(r => ({ supersets: [], ...r, cfg: { ...DEFAULT_CFG(), ...r.cfg } }))
         }
         if (ver < 4) p.sync = p.sync || { url: '', token: '', uid: '', rev: 0, lastSync: 0 }
+        if (ver < 5) p.sync = { ...p.sync, dirty: true, conflict: null, status: 'idle' }
         return normalizeState(p)
       },
       onRehydrateStorage: () => state => {
         // 就地净化 rehydrate 后的状态：渲染前生效，下一次 persist 写回干净副本
         if (state) normalizeState(state)
-        lastChangeAt = 0
-        if (state?.sync?.url && state?.sync?.token) state.syncNow?.()
+        if (state?.sync?.url && state?.sync?.token) queueMicrotask(() => state.syncNow?.())
       },
       partialize: s => ({
         settings: s.settings,
@@ -434,21 +519,25 @@ export const useStore = create(
         workouts: s.workouts,
         bodyweight: s.bodyweight,
         active: s.active,
+        recovery: s.recovery,
       }),
     }
   )
 )
 
-/* 任意数据改动 → 记录时间；已配置云同步时：每 60s 推一次欠账、回前台推一次 */
-useStore.subscribe(() => {
-  lastChangeAt = Date.now()
+/* 领域数据改动标记待上传；每 60s 及回前台同步，干净时只拉取。 */
+useStore.subscribe((state, prev) => {
+  if (DATA_KEYS.some(key => state[key] !== prev[key])) {
+    changeVersion++
+    state.setSync({ dirty: true })
+  }
 })
 setInterval(() => {
   const s = useStore.getState()
-  if (s.sync.url && s.sync.token && lastChangeAt > s.sync.lastSync) s.syncNow()
+  if (s.sync.url && s.sync.token) s.syncNow()
 }, 60000)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return
   const s = useStore.getState()
-  if (s.sync.url && s.sync.token && lastChangeAt > s.sync.lastSync) s.syncNow()
+  if (s.sync.url && s.sync.token) s.syncNow()
 })

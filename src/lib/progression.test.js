@@ -11,6 +11,15 @@ const w = (exId, sets, daysAgo = 0) => ({
 const cfg = DEFAULT_CFG() // double 6-10, inc 2.5
 
 describe('sessionsOf', () => {
+  it('热身组不参与重量与达标判断', () => {
+    const ws = [
+      w('bench', [
+        { kg: 20, reps: 5, w: true },
+        { kg: 100, reps: 10 },
+      ]),
+    ]
+    expect(nextTarget(cfg, ws, 'bench')).toMatchObject({ kg: 102.5, reps: 6 })
+  })
   it('只取该动作最近的完成组，跳过没有的训练', () => {
     const ws = [
       w('bench', [{ kg: 60, reps: 8 }]),
