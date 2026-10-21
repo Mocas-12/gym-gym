@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import ExercisePicker from './ExercisePicker.jsx'
 import SchemeRow from './SchemeRow.jsx'
+import { editedWorkoutTimes } from '../lib/workout-edit.js'
 import { localDate } from '../lib/dates.js'
 
 const dateStrOf = ts => localDate(ts)
@@ -74,15 +75,14 @@ export default function WorkoutEdit({ workout, onClose }) {
     })
   }
   const save = async () => {
-    const dur = workout ? Math.max(600e3, (workout.end ?? workout.start) - workout.start) : 3600e3
-    const start = new Date(dateStr + 'T12:00:00').getTime()
+    const { start, end } = editedWorkoutTimes(workout, dateStr)
     const doc = {
       ...(workout || {}),
       id: workout?.id || newId(),
       name: name.trim() || '训练',
       d: dateStr,
       start,
-      end: start + dur,
+      end,
       entries,
     }
     let saved

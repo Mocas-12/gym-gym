@@ -1,6 +1,7 @@
 /* 训练会话的纯逻辑：容量、PR 判定、收尾归档、重量预填。
  * 全部纯函数，配单测 —— 这里是“决定你举多重”的领域逻辑。 */
 // @ts-check
+import { validSet, boundedSetCount } from './sets.js'
 import { best1RM } from './onerm.js'
 
 /**
@@ -12,7 +13,7 @@ export function entryVolume(e) {
   if (e.type === 'time' || e.type === 'cardio') return 0
   // 热身组（w 标记）不计容量；无有效 kg×reps 的组（有氧/计时）也不计
   return (e.sets || []).reduce((sum, s) => {
-    if (!s.done || s.w || !s.kg || !s.reps) return sum
+    if (!s.done || s.w || !validSet(s, e.type) || !s.kg || !s.reps) return sum
     return sum + s.kg * s.reps
   }, 0)
 }
@@ -66,8 +67,8 @@ export function finalizeWorkout(active, workouts) {
   const entries = (active.entries || [])
     .map(e => ({
       ...e,
-      plannedSets: (e.sets || []).filter(s => !s.w).length,
-      sets: (e.sets || []).filter(s => s.done),
+      plannedSets: boundedSetCount((e.sets || []).filter(s => !s.w).length),
+      sets: (e.sets || []).filter(s => s.done && validSet(s, e.type)),
     }))
     .filter(e => e.sets.length > 0)
   if (!entries.length) return { workout: null, prs: [] }
@@ -109,8 +110,8 @@ export function withStats(doc, others) {
     entries: (doc.entries || [])
       .map(e => ({
         ...e,
-        plannedSets: Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length),
-        sets: (e.sets || []).filter(s => s.done),
+        plannedSets: boundedSetCount(Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length)),
+        sets: (e.sets || []).filter(s => s.done && validSet(s, e.type)),
       }))
       .filter(e => e.sets.length > 0),
   }
@@ -132,11 +133,13 @@ export function rebuildStats(workouts) {
     (a, b) => (a.start || 0) - (b.start || 0) || String(a.id).localeCompare(String(b.id))
   )
   const result = sorted.map(w => {
-    const entries = (w.entries || []).map(e => ({
-      ...e,
-      plannedSets: Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length),
-      sets: (e.sets || []).filter(s => s.done),
-    }))
+    const entries = (w.entries || [])
+      .map(e => ({
+        ...e,
+        plannedSets: boundedSetCount(Math.max(e.plannedSets || 0, (e.sets || []).filter(s => !s.w).length)),
+        sets: (e.sets || []).filter(s => s.done && validSet(s, e.type)),
+      }))
+      .filter(e => e.sets.length)
     /** @type {import('./types.js').PRItem[]} */
     const prs = []
     for (const e of entries) {
@@ -152,5 +155,5 @@ export function rebuildStats(workouts) {
     else delete doc.prs
     return doc
   })
-  return result.reverse()
+  return result.filter(w => w.entries.length).reverse()
 }

@@ -1,8 +1,9 @@
+import { validSet } from './sets.js'
 import { localDate } from './dates.js'
 import { entryVolume } from './workout.js'
 
 export function entrySummary(entry) {
-  const sets = (entry?.sets || []).filter(s => s.done && !s.w)
+  const sets = (entry?.sets || []).filter(s => s.done && !s.w && validSet(s, entry?.type))
   if (entry?.type === 'time')
     return { sets: sets.length, value: sets.reduce((n, s) => n + (s.sec ?? s.kg ?? 0), 0), unit: '秒' }
   if (entry?.type === 'cardio')
@@ -34,7 +35,13 @@ export function weeklyReview(history, now = new Date(), offset = 0) {
   const priorUntil = new Date(until)
   priorUntil.setDate(priorUntil.getDate() - 7)
   const summarize = (from, to) => {
-    const workouts = history.filter(w => w.start >= +from && w.start < +to && w.start <= +now)
+    const workouts = history.filter(
+      w =>
+        w.start >= +from &&
+        w.start < +to &&
+        w.start <= +now &&
+        w.entries.some(e => (e.sets || []).some(s => s.done && validSet(s, e.type)))
+    )
     return {
       sessions: workouts.length,
       days: new Set(workouts.map(w => localDate(w.start))).size,

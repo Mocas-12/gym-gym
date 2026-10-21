@@ -5,6 +5,24 @@ const mkActive = entries => ({ id: 'a', d: '2026-10-11', name: '测试', start: 
 const pastWorkout = entries => ({ id: 'w1', entries })
 
 describe('finalizeWorkout', () => {
+  it.each([
+    ['reps', { kg: null, reps: null, done: true }],
+    ['reps', { kg: -60, reps: 8, done: true }],
+    ['time', { sec: null, done: true }],
+    ['cardio', { min: 0, done: true }],
+  ])('拒绝只有无效已勾选组的 %s 训练', (type, set) => {
+    expect(finalizeWorkout(mkActive([{ exId: 'x', type, sets: [set] }]), []).workout).toBeNull()
+  })
+  it('自重零负重、有效计时与有氧仍能归档', () => {
+    for (const [type, set] of [
+      ['reps', { kg: 0, reps: 8 }],
+      ['time', { sec: 45 }],
+      ['cardio', { min: 10 }],
+    ])
+      expect(
+        finalizeWorkout(mkActive([{ exId: 'x', type, sets: [{ ...set, done: true }] }]), []).workout
+      ).not.toBeNull()
+  })
   it('剔除未完成组和空动作，没有完成组则拒绝归档', () => {
     const a = mkActive([
       {

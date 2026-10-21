@@ -6,6 +6,7 @@
  * 与 openGym 相同的两条铁律：没做满绝不加重；停滞触发减载而不是硬顶。
  */
 // @ts-check
+import { boundedSetCount } from './sets.js'
 
 /** @type {{ id: string, name: string }[]} */
 export const SCHEMES = [
@@ -79,7 +80,9 @@ export function nextTarget(cfg, workouts, exId) {
   const entry = (workouts || [])
     .flatMap(w => w?.entries || [])
     .find(e => e.exId === exId && e.sets?.some(eligible))
-  const planned = Math.max(entry?.plannedSets || 0, (entry?.sets || []).filter(s => !s.w).length, last.length)
+  const planned = boundedSetCount(
+    Math.max(entry?.plannedSets || 0, (entry?.sets || []).filter(s => !s.w).length, last.length)
+  )
   // 进 schemes 运算前按「字段必有」处理：sessionsOf 已过滤有效组，cfg 由 DEFAULT_CFG 补全
   const kg = /** @type {number} */ (last[0].kg)
   /** 完成组的 reps 缺失视为 0（比较用，不参与展示） @param {import('./types.js').SetEntry} s @returns {number} */
@@ -141,8 +144,8 @@ export function nextTarget(cfg, workouts, exId) {
     const min = /** @type {number} */ (cfg.min)
     const max = /** @type {number} */ (cfg.max)
     const inc = /** @type {number} */ (cfg.inc)
-    const setsTarget = cfg.sets || 3
-    const setsMax = cfg.setsMax || 5
+    const setsTarget = boundedSetCount(cfg.sets)
+    const setsMax = Math.max(setsTarget, boundedSetCount(cfg.setsMax, 5))
     const n = last.length
     const allMax = last.every(s => repsOf(s) >= max)
     const anyMin = last.some(s => repsOf(s) < min)

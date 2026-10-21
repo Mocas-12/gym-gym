@@ -1,11 +1,17 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 vi.mock('../lib/sync.js', () => ({ pushData: vi.fn(), pullData: vi.fn() }))
-const backup = vi.hoisted(() => ({ value: null }))
+const backup = vi.hoisted(() => ({ value: null, records: new Map(), seq: 0 }))
 vi.mock('../lib/recovery.js', () => ({
   writeRecovery: vi.fn(async value => {
     backup.value = value
+    const id = String(++backup.seq)
+    backup.records.set(id, value)
+    return id
   }),
-  readRecovery: vi.fn(async () => backup.value),
+  readRecovery: vi.fn(async id => backup.records.get(id || 'latest')),
+  deleteRecovery: vi.fn(async id => {
+    backup.records.delete(id)
+  }),
 }))
 const memory = new Map()
 vi.stubGlobal('localStorage', {
@@ -15,6 +21,8 @@ vi.stubGlobal('localStorage', {
 })
 vi.stubGlobal('document', { addEventListener() {} })
 vi.stubGlobal('window', { localStorage: globalThis.localStorage })
+const { usePersistence, durableStorage } = await import('./persistence.js')
+usePersistence.setState({ writable: true, ready: true })
 const { useStore } = await import('./useStore.js')
 const { pushData, pullData } = await import('../lib/sync.js')
 const { writeRecovery } = await import('../lib/recovery.js')
@@ -32,11 +40,14 @@ let cloud = null,
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-21T12:00:00'))
+  memory.clear()
+  durableStorage.getItem('gym_gym_v1')
+  usePersistence.setState({ writable: true, ready: true, pending: null, error: '', conflict: false })
   vi.mocked(writeRecovery).mockClear()
   state().setSync({ url: '', token: '', rev: 0, lastSync: 0, conflict: null, base: null })
   await state().resetAll()
-  memory.clear()
   backup.value = null
+  backup.records.clear()
   cloud = null
   rev = 0
   vi.mocked(pullData)
@@ -52,6 +63,56 @@ beforeEach(async () => {
 afterEach(() => vi.useRealTimers())
 
 describe('训练与数据保护', () => {
+  it('保存失败时保留待保存训练与旧恢复点，重试后再切换指针', async () => {
+    state().logBodyweight(80)
+    await state().resetAll()
+    state().logBodyweight(72)
+    const previous = state().recovery.id
+    const write = localStorage.setItem
+    localStorage.setItem = () => {
+      throw new Error('QuotaExceededError')
+    }
+    try {
+      await state().importState(JSON.stringify({ app: 'gym-gym', bodyweight: [{ d: '2026-10-21', kg: 74 }] }))
+      expect(state().bodyweight[0].kg).toBe(74)
+      expect(JSON.parse(memory.get('gym_gym_v1')).state.bodyweight[0].kg).toBe(72)
+      expect(usePersistence.getState().pending).toBeTruthy()
+      expect(backup.records.has(previous)).toBe(true)
+      expect(await state().syncNow()).toBe('off')
+    } finally {
+      localStorage.setItem = write
+    }
+    const { retrySave } = await import('./persistence.js')
+    retrySave()
+    expect(JSON.parse(memory.get('gym_gym_v1')).state.bodyweight[0].kg).toBe(74)
+    expect(usePersistence.getState().pending).toBeNull()
+    expect(backup.records.has(previous)).toBe(false)
+  })
+  it('空数值不能勾选完成，合法自重可以', () => {
+    state().startWorkout('自重', ['pushup'])
+    state().updateSet('pushup', 0, { kg: null, reps: null })
+    expect(() => state().toggleDone('pushup', 0)).toThrow('有效')
+    expect(state().active.entries[0].sets[0].done).toBe(false)
+    state().updateSet('pushup', 0, { kg: 0, reps: 8 })
+    state().toggleDone('pushup', 0)
+    expect(state().finishWorkout().entries).toHaveLength(1)
+  })
+  it('导入巨量计划组数后开练最多生成 50 组，新增与复制也有上限', async () => {
+    await state().importState(
+      JSON.stringify({
+        app: 'gym-gym',
+        workouts: [{ ...workout('w', 1), entries: [{ ...workout('w', 1).entries[0], plannedSets: 1e9 }] }],
+      })
+    )
+    expect(state().workouts[0].entries[0].plannedSets).toBe(50)
+    state().startWorkout('力量', ['bench'], 'push')
+    expect(state().active.entries[0].sets).toHaveLength(50)
+    state().addSet('bench')
+    state().copySet('bench', 0)
+    expect(state().active.entries[0].sets).toHaveLength(50)
+    state().applyScheme('bench', 1e9, 8, 60)
+    expect(state().active.entries[0].sets).toHaveLength(50)
+  })
   it('空训练不归档；计时动作使用秒数目标', () => {
     state().startWorkout('未完成', ['bench'])
     const active = state().active
@@ -88,6 +149,19 @@ describe('训练与数据保护', () => {
     state().logBodyweight(72)
     await expect(pending).rejects.toThrow('数据已变化')
     expect(state().bodyweight[0].kg).toBe(72)
+  })
+  it('被拒绝的导入不会替换原恢复点', async () => {
+    state().logBodyweight(80)
+    await state().resetAll()
+    const previous = state().recovery.id
+    state().logBodyweight(72)
+    const pending = state().importState(JSON.stringify({ app: 'gym-gym', workouts: [] }))
+    state().logBodyweight(73)
+    await expect(pending).rejects.toThrow('数据已变化')
+    expect(state().recovery.id).toBe(previous)
+    expect(backup.records.size).toBe(1)
+    await state().restoreRecovery()
+    expect(state().bodyweight[0].kg).toBe(80)
   })
   it('旧版本内联恢复点仍能恢复', async () => {
     useStore.setState({

@@ -8,27 +8,11 @@ import { finalizeWorkout, prefillFor, withStats, rebuildStats } from '../lib/wor
 import { nextTarget, DEFAULT_CFG } from '../lib/progression.js'
 import { pushData, pullData } from '../lib/sync.js'
 import { normalizeState } from '../lib/normalize.js'
+import { assertWritable, durableStorage, usePersistence } from './persistence.js'
+import { boundedSetCount, validSet, MAX_SETS } from '../lib/sets.js'
 import { localDate } from '../lib/dates.js'
-import { readRecovery, writeRecovery } from '../lib/recovery.js'
+import { readRecovery, writeRecovery, deleteRecovery } from '../lib/recovery.js'
 import { DATA_KEYS, fingerprints, mergeDocuments, chooseConflicts, sameFingerprints } from '../lib/merge.js'
-
-/* 启动自愈（第一优先）：store 初始化之前就把持久层里的脏数据洗掉。
- * 此前只清洗内存态、写回比较时机有 bug，导致脏数据长期滞留在存储里反复引发崩溃。 */
-try {
-  const raw = localStorage.getItem('gym_gym_v1')
-  if (raw) {
-    const doc = JSON.parse(raw)
-    if (doc && doc.state) {
-      const before = JSON.stringify(doc.state)
-      normalizeState(doc.state)
-      if (JSON.stringify(doc.state) !== before) {
-        localStorage.setItem('gym_gym_v1', JSON.stringify(doc))
-      }
-    }
-  }
-} catch {
-  /* 存储不可读时让 zustand 走默认初始化 */
-}
 
 /* getRandomValues 而非 randomUUID：后者在 iOS 15.3- 和非安全上下文（局域网 http 调试）不存在 */
 const uid = () =>
@@ -51,9 +35,19 @@ let connectionVersion = 0
 let inFlight = null
 const snapshot = state => Object.fromEntries(DATA_KEYS.map(key => [key, state[key]]))
 
+const guardedWrites = creator => (set, get, api) =>
+  creator(
+    patch => {
+      assertWritable()
+      return set(patch)
+    },
+    get,
+    api
+  )
+
 export const useStore = create(
   persist(
-    (set, get) => ({
+    guardedWrites((set, get) => ({
       settings: { restSec: 90, sound: true, vibrate: true },
       customEx: [], // 用户自建练习
       routines: PRESET_ROUTINES,
@@ -90,11 +84,12 @@ export const useStore = create(
                 : cfg
         const t = nextTarget(effective, workouts, exId)
         if (t) {
-          const n =
+          const n = boundedSetCount(
             t.sets ||
-            workouts.flatMap(w => w.entries).find(e => e.exId === exId)?.plannedSets ||
-            cfg?.sets ||
-            3
+              workouts.flatMap(w => w.entries).find(e => e.exId === exId)?.plannedSets ||
+              cfg?.sets ||
+              3
+          )
           return {
             sets: Array.from({ length: n }, () => ({
               kg: t.kg,
@@ -113,7 +108,7 @@ export const useStore = create(
         ) {
           const sec = effective.targetSec || 45
           return {
-            sets: Array.from({ length: effective.sets || 3 }, () => ({ sec, done: false })),
+            sets: Array.from({ length: boundedSetCount(effective.sets) }, () => ({ sec, done: false })),
             note: null,
             targetSec: sec,
           }
@@ -183,7 +178,7 @@ export const useStore = create(
           active: {
             ...a,
             entries: a.entries.map(e => {
-              if (e.exId !== exId) return e
+              if (e.exId !== exId || e.sets.length >= MAX_SETS) return e
               const prev = e.sets[e.sets.length - 1]
               const s =
                 copyPrev && prev
@@ -211,6 +206,8 @@ export const useStore = create(
         const e = a?.entries.find(x => x.exId === exId)
         const s = e?.sets[i]
         if (!s) return null
+        if (!s.done && !validSet(s, e.type))
+          throw new Error('请先填写有效的次数、秒数或分钟数；重量可填 0 表示自重')
         const nowDone = !s.done
         get().updateSet(exId, i, { done: nowDone })
         return nowDone ? (e.restSec ?? get().settings.restSec) : null // 完成 → 返回应休息秒数
@@ -234,7 +231,7 @@ export const useStore = create(
           active: {
             ...a,
             entries: a.entries.map(e => {
-              if (e.exId !== exId) return e
+              if (e.exId !== exId || e.sets.length >= MAX_SETS) return e
               const src = e.sets[i]
               if (!src) return e
               const sets = [...e.sets]
@@ -247,7 +244,9 @@ export const useStore = create(
       setEntryRest(exId, sec) {
         const a = get().active
         if (!a) return
-        set({ active: { ...a, entries: a.entries.map(e => (e.exId === exId ? { ...e, restSec: sec } : e)) } })
+        set({
+          active: { ...a, entries: a.entries.map(e => (e.exId === exId ? { ...e, restSec: sec } : e)) },
+        })
       },
       /* 点组号切换热身组：不计容量/PR/1RM/恢复统计 */
       toggleWarmup(exId, i) {
@@ -272,7 +271,10 @@ export const useStore = create(
             entries: a.entries.map(e =>
               e.exId !== exId
                 ? e
-                : { ...e, sets: Array.from({ length: n }, () => ({ kg, reps, done: false })) }
+                : {
+                    ...e,
+                    sets: Array.from({ length: boundedSetCount(n) }, () => ({ kg, reps, done: false })),
+                  }
             ),
           },
         })
@@ -319,12 +321,24 @@ export const useStore = create(
       },
       async syncNow() {
         const s = get().sync
+        if (
+          !usePersistence.getState().writable ||
+          !usePersistence.getState().ready ||
+          usePersistence.getState().pending
+        )
+          return 'off'
         if (!s.url || !s.token) return 'off'
         if (s.conflict) return 'conflict'
         if (inFlight) return inFlight
-        const connection = connectionVersion
-        const connected = () => connectionVersion === connection
+        const connection = connectionVersion,
+          epoch = usePersistence.getState().epoch
+        const connected = () =>
+          connectionVersion === connection &&
+          usePersistence.getState().writable &&
+          !usePersistence.getState().pending &&
+          usePersistence.getState().epoch === epoch
         get().setSync({ status: 'syncing' })
+        if (!connected()) return 'off'
         inFlight = (async () => {
           try {
             // 每次先拉取。409 后重新合并，绝不按旧 revision 覆盖。
@@ -508,14 +522,23 @@ export const useStore = create(
           at: Date.now(),
           ...(remoteJson ? { remoteJson } : {}),
         }
-        await writeRecovery(value)
-        if (version !== changeVersion || active !== get().active) throw new Error('数据已变化，请重试')
-        return { reason, at: value.at, hasRemote: !!remoteJson }
+        const epoch = usePersistence.getState().epoch
+        const id = await writeRecovery(value)
+        if (
+          version !== changeVersion ||
+          active !== get().active ||
+          !usePersistence.getState().writable ||
+          epoch !== usePersistence.getState().epoch
+        ) {
+          await deleteRecovery(id).catch(() => {})
+          throw new Error('数据已变化，请重试')
+        }
+        return { id, reason, at: value.at, hasRemote: !!remoteJson }
       },
       async restoreRecovery(remote = false) {
         const recovery = get().recovery
         if (!recovery) return false
-        const value = recovery.json ? recovery : await readRecovery()
+        const value = recovery.json ? recovery : await readRecovery(recovery.id)
         const json = remote ? value?.remoteJson : value?.json
         if (!json) throw new Error('恢复点不存在，请使用导出的备份')
         await get().importState(json)
@@ -543,8 +566,10 @@ export const useStore = create(
       allEx() {
         return [...EXERCISES, ...get().customEx]
       },
-    }),
+    })),
     {
+      storage: durableStorage,
+      skipHydration: true,
       name: 'gym_gym_v1',
       version: 5,
       /* v1→v2：补 plan 与 routine 的 cfg/supersets；v3：清洗脏数据——
@@ -565,10 +590,22 @@ export const useStore = create(
         if (ver < 5) p.sync = { ...p.sync, dirty: true, conflict: null, status: 'idle' }
         return normalizeState(p)
       },
-      onRehydrateStorage: () => state => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          usePersistence.setState({
+            loadError: '读取本机数据失败，请勿清除站点数据。请重试或先导出原始备份。',
+          })
+          return
+        }
         // 就地净化 rehydrate 后的状态：渲染前生效，下一次 persist 写回干净副本
-        if (state) normalizeState(state)
-        if (state?.sync?.url && state?.sync?.token) queueMicrotask(() => state.syncNow?.())
+        if (state) {
+          normalizeState(state)
+          durableStorage.setItem('gym_gym_v1', {
+            state: useStore.persist.getOptions().partialize(state),
+            version: 5,
+          })
+        }
+        // 等写锁和恢复完成，再由入口启动同步。
       },
       partialize: s => ({
         settings: s.settings,
@@ -587,7 +624,7 @@ export const useStore = create(
 
 /* 领域数据改动标记待上传；每 60s 及回前台同步，干净时只拉取。 */
 useStore.subscribe((state, prev) => {
-  if (DATA_KEYS.some(key => state[key] !== prev[key])) {
+  if (usePersistence.getState().ready && DATA_KEYS.some(key => state[key] !== prev[key])) {
     changeVersion++
     state.setSync({ dirty: true })
   }

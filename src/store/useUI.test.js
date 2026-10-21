@@ -9,6 +9,8 @@ vi.stubGlobal('localStorage', {
   getItem: key => storage.get(key) || null,
   setItem: (key, value) => storage.set(key, value),
 })
+const { usePersistence } = await import('./persistence.js')
+usePersistence.setState({ writable: true, ready: true })
 const { useUI } = await import('./useUI.js')
 const { restPush, restPushCancel } = await import('../lib/sync.js')
 
@@ -53,6 +55,8 @@ it('重新加载模块后恢复原截止时间，跳过后清除持久化计时'
   useUI.getState().startRest(90, '卧推')
   await Promise.resolve()
   vi.resetModules()
+  const { usePersistence: reloadedPersistence } = await import('./persistence.js')
+  reloadedPersistence.setState({ writable: true, ready: true })
   const { useUI: reloaded } = await import('./useUI.js')
   expect(reloaded.getState()).toMatchObject({ restUntil: 91000, restLabel: '卧推', restPushId: 'durable' })
   reloaded.getState().stopRest()

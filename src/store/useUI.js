@@ -1,4 +1,5 @@
 /* 休息截止时间持久化，toast 只保留在当前页面。 */
+import { usePersistence } from './persistence.js'
 import { create } from 'zustand'
 import { useStore } from './useStore.js'
 import { restPush, restPushCancel } from '../lib/sync.js'
@@ -35,6 +36,18 @@ export const useUI = create((set, get) => ({
   toastMsg: '',
   restPushId: savedRest.restPushId || null,
   restGeneration: 0,
+  restoreRest() {
+    try {
+      const value = JSON.parse(localStorage.getItem('gym-gym-rest') || '{}')
+      set({
+        restUntil: Number.isFinite(value?.restUntil) ? value.restUntil : 0,
+        restLabel: typeof value?.restLabel === 'string' ? value.restLabel : '',
+        restPushId: value?.restPushId || null,
+      })
+    } catch {
+      set({ restUntil: 0, restLabel: '', restPushId: null })
+    }
+  },
   startRest(sec, label = '') {
     get().stopRest()
     const generation = get().restGeneration
@@ -73,6 +86,7 @@ export const useUI = create((set, get) => ({
 }))
 
 useUI.subscribe((state, prev) => {
+  if (!usePersistence.getState().writable) return
   if (state.restUntil === prev.restUntil && state.restPushId === prev.restPushId) return
   try {
     localStorage.setItem(
@@ -89,7 +103,11 @@ if (typeof navigator !== 'undefined')
     if (event.data?.type !== 'rest-notification') return
     const state = useUI.getState()
     const handled =
-      document.visibilityState === 'visible' && state.restUntil > 0 && state.restPushId === event.data.restId
+      usePersistence.getState().ready &&
+      usePersistence.getState().writable &&
+      document.visibilityState === 'visible' &&
+      state.restUntil > 0 &&
+      state.restPushId === event.data.restId
     if (handled) {
       state.finishRest()
       state.toast('休息结束，准备下一组')

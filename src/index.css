@@ -1081,3 +1081,12 @@ button.card {
     border-radius: 18px 18px 0 0;
   }
 }
+
+.storage-warning {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 8px 16px;
+  border-color: #e9a650;
+  background: var(--bg);
+}

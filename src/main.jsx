@@ -4,6 +4,16 @@ import App from './App.jsx'
 import { initInstallCapture } from './lib/pwa.js'
 import { initTelemetry, reportSw } from './lib/telemetry.js'
 import './index.css'
+import { startPersistence, usePersistence } from './store/persistence.js'
+import { useStore } from './store/useStore.js'
+import { useUI } from './store/useUI.js'
+usePersistence.subscribe((state, prev) => {
+  if (state.ready && !prev.ready) useStore.getState().syncNow()
+})
+startPersistence(
+  () => useStore.persist.rehydrate(),
+  () => useUI.getState().restoreRest()
+)
 
 initInstallCapture()
 initTelemetry()
