@@ -375,21 +375,20 @@ for (const [w, h, name] of [
 
 {
   const p = await fresh({})
-  await p.route('https://sync.test/**', async route => {
-    const headers = {
-      'access-control-allow-origin': '*',
-      'access-control-allow-headers': 'content-type,authorization',
-      'access-control-allow-methods': 'GET,PUT,POST,OPTIONS',
+  // UI 冲突测试直接模拟 fetch，避免各平台 WebKit 对跨域预检拦截的差异。
+  // 真实 HTTP 路由和版本校验另由 backend/worker.test.js 覆盖。
+  await p.evaluate(() => {
+    const original = window.fetch.bind(window)
+    window.fetch = (url, options) => {
+      if (!String(url).startsWith('https://sync.test/')) return original(url, options)
+      const data =
+        String(url).endsWith('/api/data') && (!options?.method || options.method === 'GET')
+          ? { rev: 2, state: { workouts: [], bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 80 }] } }
+          : {}
+      return Promise.resolve(
+        new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } })
+      )
     }
-    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
-    const path = new URL(route.request().url()).pathname
-    if (path === '/api/data' && route.request().method() === 'GET') {
-      return route.fulfill({
-        headers,
-        json: { rev: 2, state: { workouts: [], bodyweight: [{ d: '2026-10-21', t: Date.now(), kg: 80 }] } },
-      })
-    }
-    return route.fulfill({ headers, json: {} })
   })
   await p.fill('form input', '72')
   await p.click('button:has-text("记录")')
