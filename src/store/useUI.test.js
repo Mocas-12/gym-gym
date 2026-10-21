@@ -4,6 +4,11 @@ vi.mock('./useStore.js', () => ({
   useStore: { getState: () => ({ sync: { url: 'https://test.invalid', token: 't' }, settings: {} }) },
 }))
 vi.mock('../lib/sync.js', () => ({ restPush: vi.fn(), restPushCancel: vi.fn() }))
+const storage = new Map()
+vi.stubGlobal('localStorage', {
+  getItem: key => storage.get(key) || null,
+  setItem: (key, value) => storage.set(key, value),
+})
 const { useUI } = await import('./useUI.js')
 const { restPush, restPushCancel } = await import('../lib/sync.js')
 
@@ -41,4 +46,15 @@ it('点击跳过后才到达的任务 id 也会取消', async () => {
   await Promise.resolve()
   expect(restPushCancel).toHaveBeenCalledWith('https://test.invalid', 't', 'late')
   expect(useUI.getState().restPushId).toBeNull()
+})
+
+it('重新加载模块后恢复原截止时间，跳过后清除持久化计时', async () => {
+  vi.mocked(restPush).mockResolvedValueOnce({ id: 'durable' })
+  useUI.getState().startRest(90, '卧推')
+  await Promise.resolve()
+  vi.resetModules()
+  const { useUI: reloaded } = await import('./useUI.js')
+  expect(reloaded.getState()).toMatchObject({ restUntil: 91000, restLabel: '卧推', restPushId: 'durable' })
+  reloaded.getState().stopRest()
+  expect(JSON.parse(storage.get('gym-gym-rest')).restUntil).toBe(0)
 })

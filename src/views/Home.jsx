@@ -1,3 +1,4 @@
+import WeeklyReview from '../components/WeeklyReview.jsx'
 import { useStore } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
 import { workoutVolume } from '../lib/workout.js'
@@ -105,6 +106,8 @@ export default function Home() {
           <div className="dim">进去再加动作</div>
         </button>
       </div>
+
+      <WeeklyReview workouts={workouts} />
 
       <div className="section-title">今日体重</div>
       <div className="card">

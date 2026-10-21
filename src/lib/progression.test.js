@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { nextTarget, sessionsOf, DEFAULT_CFG, deloadKg } from './progression.js'
+import { finalizeWorkout } from './workout.js'
 
 let seq = 0
 const w = (exId, sets, daysAgo = 0) => ({
@@ -148,6 +149,9 @@ describe('三进程', () => {
 })
 
 describe('计时递增', () => {
+  it('连续达标后继续从 50 秒推进到 55 秒', () => {
+    expect(nextTarget(tm, [w('plank', [{ sec: 50 }, { sec: 50 }])], 'plank').sec).toBe(55)
+  })
   const tm = { scheme: 'time', targetSec: 45, incSec: 5, maxSec: 120 }
   it('全部达标 → 目标秒数增加（秒存 sec 字段）', () => {
     const ws = [w('plank', [{ sec: 45 }, { sec: 45 }, { sec: 50 }])]
@@ -168,6 +172,18 @@ describe('计时递增', () => {
 })
 
 describe('边界', () => {
+  it('计划三组只完成一组时，不加重，并保留原计划组数', () => {
+    const active = w('bench', [
+      { kg: 60, reps: 10 },
+      { kg: 60, reps: 10 },
+      { kg: 60, reps: 10 },
+    ])
+    active.entries[0].sets[1].done = false
+    active.entries[0].sets[2].done = false
+    const { workout } = finalizeWorkout(active, [])
+    expect(workout.entries[0].plannedSets).toBe(3)
+    expect(nextTarget(cfg, [workout], 'bench')).toMatchObject({ kg: 60, sets: 3 })
+  })
   it('无历史 → null（交给预填）', () => {
     expect(nextTarget(cfg, [], 'bench')).toBeNull()
   })
@@ -194,6 +210,6 @@ describe('边界', () => {
         ],
       },
     ]
-    expect(nextTarget(cfg, ws, 'bench').kg).toBe(57.5)
+    expect(nextTarget(cfg, ws, 'bench').kg).toBe(55)
   })
 })

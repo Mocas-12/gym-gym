@@ -7,6 +7,7 @@
  * 且下一次 persist 会把干净数据写回存储，实现存储自愈。
  */
 // @ts-check
+import { rebuildStats } from './workout.js'
 import { DEFAULT_CFG, SCHEMES } from './progression.js'
 
 /** @param {any} value @returns {boolean} */
@@ -49,10 +50,14 @@ export function normalizeState(p) {
   doc.workouts = (Array.isArray(doc.workouts) ? doc.workouts : [])
     .map(cleanWorkout)
     .filter((/** @type {any} */ w) => w && w.entries.length > 0)
+  doc.workouts = rebuildStats(doc.workouts)
   if ('active' in doc) doc.active = Number.isFinite(doc.active?.start) ? cleanWorkout(doc.active) : null
-  doc.bodyweight = (Array.isArray(doc.bodyweight) ? doc.bodyweight : []).filter(
-    (/** @type {any} */ e) => object(e) && Number.isFinite(e.kg) && e.kg > 0
-  )
+  doc.bodyweight = (Array.isArray(doc.bodyweight) ? doc.bodyweight : [])
+    .filter((/** @type {any} */ e) => object(e) && Number.isFinite(e.kg) && e.kg > 0)
+    .sort(
+      (/** @type {any} */ a, /** @type {any} */ b) =>
+        (b.t || Date.parse(b.d) || 0) - (a.t || Date.parse(a.d) || 0)
+    )
   doc.customEx = (Array.isArray(doc.customEx) ? doc.customEx : [])
     .filter((/** @type {any} */ e) => object(e) && typeof e.id === 'string' && e.id)
     .map((/** @type {any} */ e) => ({ ...e, n: typeof e.n === 'string' ? e.n : e.id }))

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useUI } from '../store/useUI.js'
 import { useStore } from '../store/useStore.js'
 import { best1RM } from '../lib/onerm.js'
 import { e1rmSeries, trainedExercises, heatmap } from '../lib/insights.js'
@@ -23,6 +24,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric
 const fmtDur = ms => `${Math.round(ms / 60000)} 分钟`
 
 export default function HistoryView() {
+  const toast = useUI(s => s.toast)
   const { workouts, bodyweight, deleteWorkout, customEx, allEx, settings } = useStore()
   // 渲染一律基于净化后的列表（防御兜底：store 已保证，这里双保险）
   const list = useMemo(
@@ -66,6 +68,7 @@ export default function HistoryView() {
     for (const w of workouts) {
       if (!w) continue
       for (const e of w.entries || []) {
+        if (e.type === 'time' || e.type === 'cardio') continue
         const b = best1RM(e.sets)
         if (Number.isFinite(b) && b > (best[e.exId]?.e1rm || 0))
           best[e.exId] = { exId: e.exId, name: e.name, e1rm: b }
@@ -212,8 +215,12 @@ export default function HistoryView() {
                 <div className="row">
                   <button
                     className="btn danger"
-                    onClick={() => {
-                      deleteWorkout(w.id)
+                    onClick={async () => {
+                      try {
+                        await deleteWorkout(w.id)
+                      } catch (err) {
+                        toast(err.message)
+                      }
                       setConfirmDel(null)
                     }}
                   >

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { finalizeWorkout, prefillFor, withStats } from './workout.js'
+import { finalizeWorkout, prefillFor, withStats, rebuildStats } from './workout.js'
 
 const mkActive = entries => ({ id: 'a', d: '2026-10-11', name: '测试', start: 1, entries })
 const pastWorkout = entries => ({ id: 'w1', entries })
@@ -65,6 +65,20 @@ describe('finalizeWorkout', () => {
 })
 
 describe('withStats 编辑重算', () => {
+  it('补记的 PR 只对照此前记录，修改早期记录会更新后续标记', () => {
+    const make = (id, start, kg) => ({
+      id,
+      start,
+      entries: [{ exId: 'bench', sets: [{ kg, reps: 5, done: true }] }],
+    })
+    const first = make('a', 1, 60),
+      middle = make('b', 2, 70),
+      last = make('c', 3, 80)
+    expect(withStats(middle, [first, last]).prs).toHaveLength(1)
+    const revised = rebuildStats([{ ...first, entries: make('a', 1, 90).entries }, middle, last])
+    expect(revised.find(w => w.id === 'c').prs).toBeUndefined()
+    expect(rebuildStats([middle, last]).find(w => w.id === 'b').prs).toBeUndefined()
+  })
   const past = pastWorkout([{ exId: 'bench', name: '卧推', sets: [{ kg: 80, reps: 5, done: true }] }]) // 93.3
   it('改组后容量重算、PR 对照其余历史重判', () => {
     const doc = {

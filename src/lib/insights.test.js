@@ -12,6 +12,21 @@ const mk = (daysAgo, entries, volume = 0) => ({
 })
 
 describe('e1rmSeries', () => {
+  it('计时与有氧旧数据即使带 kg/reps 也不参与力量估算', () => {
+    const sets = [{ kg: 60, reps: 8, done: true }]
+    expect(
+      e1rmSeries(
+        [
+          mk(0, [
+            { exId: 'time', type: 'time', sets },
+            { exId: 'cardio', type: 'cardio', sets },
+          ]),
+        ],
+        'time'
+      )
+    ).toEqual([])
+    expect(e1rmSeries([mk(0, [{ exId: 'cardio', type: 'cardio', sets }])], 'cardio')).toEqual([])
+  })
   it('按天聚合取最高、时间升序', () => {
     const ws = [
       mk(0, [{ exId: 'bench', sets: [{ kg: 80, reps: 3, done: true }] }]), // 88

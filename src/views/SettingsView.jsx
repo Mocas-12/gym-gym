@@ -188,9 +188,9 @@ export default function SettingsView() {
             <div className="row">
               <button
                 className="btn primary"
-                onClick={() => {
+                onClick={async () => {
                   try {
-                    importState(pendingImport.json)
+                    await importState(pendingImport.json)
                     setPendingImport(null)
                     toast('备份已导入，可通过恢复点撤销')
                   } catch (err) {
@@ -214,9 +214,9 @@ export default function SettingsView() {
             </p>
             <button
               className="btn ghost"
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  restoreRecovery()
+                  await restoreRecovery()
                   toast('已恢复，当前数据也已保存为恢复点')
                 } catch (err) {
                   toast('恢复失败：' + err.message)
@@ -225,6 +225,21 @@ export default function SettingsView() {
             >
               恢复上次数据
             </button>
+            {recovery.hasRemote && (
+              <button
+                className="btn ghost"
+                onClick={async () => {
+                  try {
+                    await restoreRecovery(true)
+                    toast('已恢复冲突前云端数据')
+                  } catch (err) {
+                    toast(err.message)
+                  }
+                }}
+              >
+                恢复冲突前云端
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -254,10 +269,14 @@ export default function SettingsView() {
       <div className="card">
         <button
           className="btn danger block"
-          onClick={() => {
+          onClick={async () => {
             if (confirm('清空全部数据？会先保存一份恢复点，仍建议导出备份。')) {
-              resetAll()
-              toast('已清空')
+              try {
+                await resetAll()
+                toast('已清空')
+              } catch (err) {
+                toast(err.message)
+              }
             }
           }}
         >
