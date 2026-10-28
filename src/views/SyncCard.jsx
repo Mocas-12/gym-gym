@@ -97,7 +97,7 @@ export default function SyncCard() {
   const doLocal = async () => {
     try {
       const reg = await navigator.serviceWorker.ready
-      await reg.showNotification('GymGym · 本地通知测试', {
+      await reg.showNotification('GymGym，本地通知测试', {
         body: '看到这条 = 通知显示正常，问题只在推送送达环节',
       })
       toast('本地通知已发出，看锁屏/横幅')
@@ -167,7 +167,7 @@ export default function SyncCard() {
                       ? '本地有数据待上传'
                       : '已同步'}
               {sync.lastSync
-                ? ` · ${new Date(sync.lastSync).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 同步`
+                ? `，${new Date(sync.lastSync).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 同步`
                 : ''}
             </span>
           </div>
@@ -178,7 +178,7 @@ export default function SyncCard() {
               </p>
               <p className="dim small">
                 {sync.conflict.conflicts
-                  ?.map(c => `${c.key} · ${c.local?.name || c.remote?.name || c.id}`)
+                  ?.map(c => `${c.key}，${c.local?.name || c.remote?.name || c.id}`)
                   .join('、')}
               </p>
               <div className="row">
@@ -244,12 +244,12 @@ export default function SyncCard() {
               style={{ marginTop: 8, maxHeight: 180, overflow: 'auto', textAlign: 'left' }}
             >
               <div>
-                本机 v{APP_VERSION} · 已上报设备 {diag.devices.length} · 服务端错误 {diag.errors.length} 条
+                本机 v{APP_VERSION}，已上报设备 {diag.devices.length}，服务端错误 {diag.errors.length} 条
               </div>
               {diag.devices.map(d => (
                 <div key={d.dev + d.t}>
-                  {d.dev?.slice(0, 6)} · v{d.v} · SW{d.swActive ? '✓' : '✗'}
-                  {d.swV ? `(${d.swV})` : ''} · 预缓存{d.precache} ·{' '}
+                  {d.dev?.slice(0, 6)}，v{d.v}，SW{d.swActive ? '✓' : '✗'}
+                  {d.swV ? `(${d.swV})` : ''}，预缓存{d.precache} ·{' '}
                   {new Date(d.t).toLocaleString('zh-CN', {
                     month: 'numeric',
                     day: 'numeric',

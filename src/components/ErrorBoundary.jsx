@@ -20,7 +20,7 @@ export default class ErrorBoundary extends React.Component {
       const msg = String(this.state.error?.message || this.state.error)
       return (
         <div className="page empty-page">
-          <div className="empty-icon">⚠️</div>
+          <div className="empty-icon">!</div>
           <p className="small">这个页面出错了，其他页面不受影响</p>
           <p className="dim small mono err-text">{msg}</p>
           <div className="row">

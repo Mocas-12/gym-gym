@@ -25,7 +25,7 @@ export default function RestTimer() {
 
   if (!restUntil) return null
   return (
-    <div className="restbar">
+    <div className="restbar" role="region" aria-label="组间休息">
       <div className="rest-num">{fmt(left)}</div>
       <div className="rest-label">{restLabel || '休息'}</div>
       <div className="rest-btns">

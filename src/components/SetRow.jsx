@@ -20,6 +20,7 @@ export default function SetRow({
   const num = (field, placeholder, mode = 'decimal') => (
     <input
       className="input set-input"
+      aria-label={`第 ${idx + 1} 组 ${placeholder}`}
       inputMode={mode}
       placeholder={placeholder}
       value={s[field] ?? ''}
@@ -30,7 +31,7 @@ export default function SetRow({
   return (
     <div className="swipe-wrap">
       <div className={'swipe-bg left' + (dx < -20 ? ' show' : '')}>
-        <span>🗑 删除</span>
+        <span>删除</span>
       </div>
       <div className={'swipe-bg right' + (dx > 20 ? ' show' : '')}>
         <span>⧉ 复制</span>
@@ -83,11 +84,16 @@ export default function SetRow({
             {s.rir == null ? 'R' : `R${s.rir}`}
           </button>
         )}
-        <button className={'done-btn' + (s.done ? ' on' : '')} onClick={onDone}>
+        <button
+          className={'done-btn' + (s.done ? ' on' : '')}
+          aria-label={`第 ${idx + 1} 组${s.done ? '已完成，点按撤销' : '标记完成'}`}
+          aria-pressed={!!s.done}
+          onClick={onDone}
+        >
           ✓
         </button>
-        <button className="icon-btn desktop-only" onClick={onDel}>
-          🗑
+        <button className="icon-btn desktop-only" aria-label={`删除第 ${idx + 1} 组`} onClick={onDel}>
+          ×
         </button>
       </div>
     </div>

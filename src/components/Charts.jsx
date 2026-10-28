@@ -52,7 +52,7 @@ export function LineChart({ data, unit = 'kg' }) {
   const line = pts.map(p => p.join(',')).join(' ')
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="spark">
+      <svg role="img" aria-label="训练力量变化曲线" viewBox={`0 0 ${W} ${H}`} className="spark">
         <polyline
           points={line}
           fill="none"

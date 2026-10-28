@@ -62,7 +62,11 @@ export default function WorkoutView() {
   if (!active) {
     return (
       <div className="page empty-page">
-        <div className="empty-icon">🏋️</div>
+        <div className="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="64" height="64" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M7 18v12M14 12v24M34 12v24M41 18v12M14 24h20" />
+          </svg>
+        </div>
         <p className="dim">没有进行中的训练</p>
         <button
           className="btn primary"
@@ -99,7 +103,7 @@ export default function WorkoutView() {
     }
     if (rest > 0) {
       const partner = supPartner(en)
-      const label = partner ? `↔ 接着做 ${partner}` : en.type === 'time' ? en.name : `${en.name} · 下一组`
+      const label = partner ? `↔ 接着做 ${partner}` : en.type === 'time' ? en.name : `${en.name}，下一组`
       startRest(rest, label)
       navigator.vibrate?.(60)
     }
@@ -115,7 +119,7 @@ export default function WorkoutView() {
     const { perSide, leftover, tooLight } = platesFor(kg, plates.bar, plates.avail)
     return tooLight
       ? `${kg}kg 轻于空杆（${plates.bar}kg）`
-      : `每边：${fmtPlates(perSide)}${leftover ? ` · 差 ${leftover}kg 没有合适的片` : ''}`
+      : `每边：${fmtPlates(perSide)}${leftover ? `，差 ${leftover}kg 没有合适的片` : ''}`
   }
 
   return (
@@ -145,7 +149,7 @@ export default function WorkoutView() {
                 toast('还没有完成任何一组')
                 return
               }
-              toast(`已保存 · ${w.entries.length} 个动作${w.prs?.length ? ` · 🎉 ${w.prs.length} 个PR` : ''}`)
+              toast(`已保存，${w.entries.length} 个动作${w.prs?.length ? `，🎉 ${w.prs.length} 个PR` : ''}`)
               location.hash = '#/home'
             }}
           >
@@ -170,7 +174,7 @@ export default function WorkoutView() {
                   className="rest-chip"
                   onClick={() => setRestPickFor(restPickFor === en.exId ? null : en.exId)}
                 >
-                  ⏱{restOf(en)}s
+                  休息 {restOf(en)}s
                 </button>
                 <button className="icon-btn" title="移除动作" onClick={() => removeEntry(en.exId)}>
                   ✕
@@ -179,15 +183,14 @@ export default function WorkoutView() {
             </div>
             {comparison && (
               <div className="dim small" data-testid="training-comparison">
-                上次（{comparison.date}）：{comparison.prior.sets} 组 · {comparison.prior.value}{' '}
+                上次（{comparison.date}）：{comparison.prior.sets} 组，{comparison.prior.value}{' '}
                 {comparison.prior.unit}
                 <br />
-                本次已完成：{comparison.current.sets} 组 · {comparison.current.value}{' '}
-                {comparison.current.unit}
+                本次已完成：{comparison.current.sets} 组，{comparison.current.value} {comparison.current.unit}
                 {comparison.current.sets > 0 && (
                   <>
                     {' '}
-                    · 差值 {comparison.delta > 0 ? '+' : ''}
+                    ，差值 {comparison.delta > 0 ? '+' : ''}
                     {comparison.delta}
                   </>
                 )}

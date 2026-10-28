@@ -67,7 +67,7 @@ export default function SettingsView() {
   }
 
   return (
-    <div className="page">
+    <div className="page settings-page">
       <h1 className="h1">设置</h1>
 
       <div className="section-title">训练</div>
@@ -209,7 +209,7 @@ export default function SettingsView() {
         {recovery && (
           <div style={{ marginTop: 12 }}>
             <p className="dim small">
-              最近恢复点：{recovery.reason}前 · {new Date(recovery.at).toLocaleString('zh-CN')}
+              最近恢复点：{recovery.reason}前，{new Date(recovery.at).toLocaleString('zh-CN')}
               。只保留一份，恢复后可再次点击撤销恢复。
             </p>
             <button
@@ -258,7 +258,7 @@ export default function SettingsView() {
             装到主屏幕后全屏运行、像原生 app 一样打开；数据存在本机，不会被系统 7 天清除。
           </p>
           <button className="btn primary block" onClick={install}>
-            📲 添加到主屏幕
+            添加到主屏幕
           </button>
         </div>
       )}
@@ -286,7 +286,7 @@ export default function SettingsView() {
 
       {/* 设备视口调试信息：排查真机「底栏不贴边」类问题的一手数据 */}
       <div className="page-foot dim small mono">
-        GymGym v{APP_VERSION} · {vp.w}×{vp.h} @dpr{vp.dpr} · 屏幕 {vp.sw}×{vp.sh} ·{' '}
+        GymGym v{APP_VERSION}，{vp.w}×{vp.h} @dpr{vp.dpr}，屏幕 {vp.sw}×{vp.sh} ·{' '}
         {vp.standalone ? '主屏幕' : '浏览器'}
       </div>
     </div>

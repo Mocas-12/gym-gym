@@ -253,7 +253,7 @@ export default function WorkoutEdit({ workout, onClose }) {
                       patchEntry(i, en2 => ({ ...en2, sets: en2.sets.filter((_, k) => k !== j) }))
                     }
                   >
-                    🗑
+                    ×
                   </button>
                 </div>
               ))}

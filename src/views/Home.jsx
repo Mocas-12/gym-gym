@@ -43,18 +43,20 @@ export default function Home() {
   }
 
   return (
-    <div className="page">
-      <h1 className="h1">GymGym</h1>
-      <p className="sub">
-        {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}
-      </p>
+    <div className="page home-page">
+      <header className="home-heading">
+        <h1 className="h1">GymGym</h1>
+        <p className="sub">
+          {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}
+        </p>
+      </header>
 
       {active && (
         <button className="card active-card" onClick={() => go('workout')}>
           <div>
-            <div className="card-title">▲ {active.name} 进行中</div>
+            <div className="card-title">{active.name} 进行中</div>
             <div className="dim">
-              {active.entries.length} 个动作 · 开始于{' '}
+              {active.entries.length} 个动作，开始于{' '}
               {new Date(active.start).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
@@ -72,7 +74,7 @@ export default function Home() {
             <div>
               <div className="card-title">{todayRoutine.name}</div>
               <div className="dim small">
-                {todayRoutine.exIds.length} 个动作 · {WEEKDAY_CN[dow]}
+                {todayRoutine.exIds.length} 个动作，{WEEKDAY_CN[dow]}
               </div>
             </div>
             <span className="btn primary sm">开练</span>
@@ -80,7 +82,7 @@ export default function Home() {
         </button>
       ) : (
         <div className="card rest-card">
-          <div className="card-title">🙂 今天休息</div>
+          <div className="card-title">今天休息</div>
           {restHintName ? (
             <div className="dim small">
               {plan.mode === 'rotation'
@@ -110,7 +112,7 @@ export default function Home() {
       <WeeklyReview workouts={workouts} />
 
       <div className="section-title">今日体重</div>
-      <div className="card">
+      <div className="card weight-card">
         {todayW ? (
           <div className="row-between">
             <span className="big-num">
@@ -136,6 +138,7 @@ export default function Home() {
         >
           <input
             name="kg"
+            aria-label="今日体重，千克"
             className="input"
             inputMode="decimal"
             placeholder={todayW ? '有变化就在这里更新…' : '输入今天体重 (kg)'}
@@ -153,7 +156,7 @@ export default function Home() {
               <div>
                 <div className="card-title">{last.name}</div>
                 <div className="dim">
-                  {fmtDate(last.start)} · {fmtDur(last.end - last.start)}
+                  {fmtDate(last.start)}，{fmtDur(last.end - last.start)}
                 </div>
               </div>
               <div className="right-align">
@@ -183,7 +186,7 @@ function Sparkline({ data: raw }) {
     .map((v, i) => `${(i / (data.length - 1)) * W},${H - 6 - ((v - min) / span) * (H - 12)}`)
     .join(' ')
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="spark">
+    <svg viewBox={`0 0 ${W} ${H}`} className="spark" role="img" aria-label="最近体重变化">
       <polyline
         points={pts}
         fill="none"

@@ -271,7 +271,7 @@ function WeightChart({ data: raw, goal }) {
   const last = data[data.length - 1]
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="spark">
+      <svg role="img" aria-label="体重变化曲线" viewBox={`0 0 ${W} ${H}`} className="spark">
         <polyline
           points={line}
           fill="none"

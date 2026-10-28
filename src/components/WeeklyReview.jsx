@@ -9,12 +9,12 @@ export default function WeeklyReview({ workouts }) {
   return (
     <>
       <div className="section-title">训练周回顾</div>
-      <div className="card">
+      <div className="card weekly-review">
         <div className="row-between">
           <button className="chip" onClick={() => setOffset(offset - 1)}>
             上一周
           </button>
-          <span className="small mono">
+          <span className="small review-range">
             {review.from} ～ {review.to}
           </span>
           <button className="chip" disabled={offset === 0} onClick={() => setOffset(offset + 1)}>
@@ -22,14 +22,14 @@ export default function WeeklyReview({ workouts }) {
           </button>
         </div>
         <p>
-          {c.sessions} 次训练 · {c.days} 天 · {c.sets} 个正式组
+          {c.sessions} 次训练，{c.days} 天，{c.sets} 个正式组
         </p>
         <p className="small">
-          力量容量 {Math.round(c.volume)} kg · 训练用时 {c.minutes} 分钟 · {c.prs} 个 PR
+          力量容量 {Math.round(c.volume)} kg，训练用时 {c.minutes} 分钟，{c.prs} 个 PR
         </p>
         {(c.timedSeconds > 0 || c.cardioMinutes > 0) && (
           <p className="small">
-            计时动作 {c.timedSeconds} 秒 · 有氧 {c.cardioMinutes} 分钟
+            计时动作 {c.timedSeconds} 秒，有氧 {c.cardioMinutes} 分钟
           </p>
         )}
         <p className="dim small">

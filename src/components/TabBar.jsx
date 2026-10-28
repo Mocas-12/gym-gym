@@ -59,11 +59,16 @@ export default function TabBar({ route, go }) {
     ['settings', '设置'],
   ]
   return (
-    <nav className="tabbar">
+    <nav className="tabbar" aria-label="主导航">
       {items.map(([id, label]) => {
         const on = route === id
         return (
-          <button key={id} className={'tab' + (on ? ' on' : '')} onClick={() => go(id)}>
+          <button
+            key={id}
+            className={'tab' + (on ? ' on' : '')}
+            aria-current={on ? 'page' : undefined}
+            onClick={() => go(id)}
+          >
             <span className="tab-icon">{ICONS[id](on)}</span>
             <span>{label}</span>
           </button>

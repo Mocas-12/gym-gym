@@ -8,3 +8,5 @@ backend/.worker-under-test.mjs
 coverage/
 
 .lighthouseci
+
+.hallmark/
